@@ -1,6 +1,6 @@
 # discord-bot-blazzy
 
-install https://nodejs.org/
+install https://nodejs.org/ (LTS)
 
 clone or download project
 
