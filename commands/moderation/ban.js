@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
 module.exports = {
 	category: 'moderation',
@@ -25,6 +25,8 @@ module.exports = {
 		const target = options.getUser('user');
 		const reason = options.getString('reason') ?? 'No reason provided.';
 		const silent = options.getBoolean('silent') ?? false;
+
+		const BAN_LOG_CHANNEL_ID = '1388319341828903124';
 
 		// Checking if the user has permission to ban a user.
 		if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
@@ -64,15 +66,39 @@ module.exports = {
 			// Ban the user first
 			await targetMember.ban({ reason });
 
+			const banEmbed = new EmbedBuilder()
+				.setTitle('🔨 User Banned')
+				.setColor(0xFF0000)
+				.addFields(
+					{ name: 'Banned User', value: `${target.username} (${target.displayName})`, inline: true },
+					{ name: 'Banned by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+					{ name: 'Reason', value: reason, inline: false },
+					{ name: 'Silent Ban', value: silent ? 'Yes' : 'No', inline: true },
+				)
+				.setThumbnail(target.displayAvatarURL({ dynamic: true }))
+				.setTimestamp()
+				.setFooter({ text: `User ID: ${target.id}` });
+
+			const logChannel = guild.channels.cache.get(BAN_LOG_CHANNEL_ID);
+			if (logChannel && logChannel.isTextBased()) {
+				try {
+					await logChannel.send({ embeds: [banEmbed] });
+				} catch (logError) {
+					console.error('Error sending log to channel:', logError);
+				}
+			} else {
+				console.warn('Log channel not found or is not a text channel');
+			}
+
 			// Then send the appropriate response
 			if (silent) {
 				await interaction.reply({
-					content: `**SILENT: Banned** ${target.tag} for **Reason:** ${reason}`,
+					content: `**SILENT: Banned** ${target.username} for **Reason:** ${reason}`,
 					ephemeral: true,
 				});
 			} else {
 				await interaction.reply({
-					content: `**Banned** ${target.tag} for **Reason:** ${reason}`,
+					content: `**Banned** ${target.username} for **Reason:** ${reason}`,
 					ephemeral: false,
 				});
 			}
