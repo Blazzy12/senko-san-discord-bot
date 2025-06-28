@@ -3,21 +3,21 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 module.exports = {
 	category: 'moderation',
 	data: new SlashCommandBuilder()
-		.setName('ban')
-		.setDescription('Bans a user.')
-		.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
+		.setName('kick')
+		.setDescription('Kicks a user.')
+		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.addUserOption(option =>
 			option.setName('user')
-				.setDescription('Bans a user for sometimes a reason.')
+				.setDescription('Kicks a user for sometimes a reason.')
 				.setRequired(true),
 		)
 		.addStringOption(option =>
 			option.setName('reason')
-				.setDescription('Reason for banning said user.'),
+				.setDescription('Reason for kicking said user.'),
 		)
 		.addBooleanOption(option =>
 			option.setName('silent')
-				.setDescription('Is this ban silent?'),
+				.setDescription('Is this kick silent?'),
 		),
 	async execute(interaction) {
 		const { options, guild } = interaction;
@@ -26,19 +26,19 @@ module.exports = {
 		const reason = options.getString('reason') ?? 'No reason provided.';
 		const silent = options.getBoolean('silent') ?? false;
 
-		const BAN_LOG_CHANNEL_ID = '1388319341828903124';
+		const KICK_LOG_CHANNEL_ID = '1388319341828903124';
 
-		// Checking if the user has permission to ban a user.
-		if (!interaction.member.permissions.has(PermissionFlagsBits.BanMembers)) {
+		// Checking if the user has permission to kick a user.
+		if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
 			return await interaction.reply({
-				content: 'You do not have permission to ban members.',
+				content: 'You do not have permission to kick members.',
 				ephemeral: true,
 			});
 		}
 
-		if (!guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) {
+		if (!guild.members.me.permissions.has(PermissionFlagsBits.KickMembers)) {
 			return await interaction.reply({
-				content: 'I do not have permission to ban members.',
+				content: 'I do not have permission to kick members.',
 				ephemeral: true,
 			});
 		}
@@ -48,9 +48,9 @@ module.exports = {
 			const targetMember = await guild.members.fetch(target.id);
 
 			// Checking role hierarchy between bot
-			if (!targetMember.bannable) {
+			if (!targetMember.kickable) {
 				return await interaction.reply({
-					content: 'I cannot ban this user- as they may have a higher role than me or be the server owner; or could even of been myself that you were trying to ban?',
+					content: 'I cannot kick this user- as they may have a higher role than me or be the server owner; or could even of been myself that you were trying to kick?',
 					ephemeral: true,
 				});
 			}
@@ -58,31 +58,31 @@ module.exports = {
 			// Checking role hierarchy between user
 			if (interaction.member.roles.highest.position <= targetMember.roles.highest.position && guild.ownerId !== interaction.user.id) {
 				return await interaction.reply({
-					content: 'You cannot ban someone with an equal or higher role than you.',
+					content: 'You cannot kick someone with an equal or higher role than you.',
 					ephemeral: true,
 				});
 			}
 
-			// Ban the user first
-			await targetMember.ban({ reason });
+			// Kick the user first
+			await targetMember.kick({ reason });
 
-			const banEmbed = new EmbedBuilder()
-				.setTitle('🔨 User Banned')
-				.setColor(0xFF0000)
+			const kickEmbed = new EmbedBuilder()
+				.setTitle('🔨 User Kicked')
+				.setColor(0xFFA500)
 				.addFields(
-					{ name: 'Banned User', value: `${target.username} (${target.displayName})`, inline: true },
-					{ name: 'Banned by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+					{ name: 'Kicked User', value: `${target.username} (${target.displayName})`, inline: true },
+					{ name: 'Kicked by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
 					{ name: 'Reason', value: reason, inline: false },
-					{ name: 'Silent Ban', value: silent ? 'Yes' : 'No', inline: true },
+					{ name: 'Silent Kick', value: silent ? 'Yes' : 'No', inline: true },
 				)
 				.setThumbnail(target.displayAvatarURL({ dynamic: true }))
 				.setTimestamp()
 				.setFooter({ text: `User ID: ${target.id}` });
 
-			const logChannel = guild.channels.cache.get(BAN_LOG_CHANNEL_ID);
+			const logChannel = guild.channels.cache.get(KICK_LOG_CHANNEL_ID);
 			if (logChannel && logChannel.isTextBased()) {
 				try {
-					await logChannel.send({ embeds: [banEmbed] });
+					await logChannel.send({ embeds: [kickEmbed] });
 				} catch (logError) {
 					console.error('Error sending log to channel:', logError);
 				}
@@ -93,20 +93,20 @@ module.exports = {
 			// Then send the appropriate response
 			if (silent) {
 				await interaction.reply({
-					content: `**SILENT: Banned** ${target.username} for **Reason:** ${reason}`,
+					content: `**SILENT: Kicked** ${target.username} for **Reason:** ${reason}`,
 					ephemeral: true,
 				});
 			} else {
 				await interaction.reply({
-					content: `**Banned** ${target.username} for **Reason:** ${reason}`,
+					content: `**Kicked** ${target.username} for **Reason:** ${reason}`,
 					ephemeral: false,
 				});
 			}
 
 		} catch (error) {
-			console.error('Error banning user:', error);
+			console.error('Error kicking user:', error);
 			await interaction.reply({
-				content: 'There was an error trying to ban this user.',
+				content: 'There was an error trying to kick this user.',
 				ephemeral: true,
 			});
 		}
