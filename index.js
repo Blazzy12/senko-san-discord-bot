@@ -18,10 +18,21 @@ for (const folder of commandFolders) {
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 	for (const file of commandFiles) {
 		const filePath = path.join(commandsPath, file);
-		const command = require(filePath);
-		// Set a new item in the Collection with the key as the command name and the value as the exported module
-		if ('data' in command && 'execute' in command) {
-			client.commands.set(command.data.name, command);
+		const commandModule = require(filePath);
+
+		// Check if the module exports an array of commands
+		if (Array.isArray(commandModule)) {
+			for (const command of commandModule) {
+				if ('data' in command && 'execute' in command) {
+					client.commands.set(command.data.name, command);
+				} else {
+					console.log(`[WARNING] A command in array at ${filePath} is missing a required "data" or "execute" property.`);
+				}
+			}
+		}
+		// Handle single command export (original behavior)
+		else if ('data' in commandModule && 'execute' in commandModule) {
+			client.commands.set(commandModule.data.name, commandModule);
 		} else {
 			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 		}
