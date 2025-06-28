@@ -23,6 +23,10 @@ in order to deploy commands run 'node .\deploy-commands.js' it is important that
 in order to launch the bot run 'node .' or 'node .\index.js'
 
 --------------------
+sqlite3 (not optional)
+
+npm install better-sqlite3
+--------------------
 optional linter (is recommended)
 
 install https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint for vscode
