@@ -4,11 +4,11 @@ module.exports = {
 	category: 'moderation',
 	data: new SlashCommandBuilder()
 		.setName('ban')
-		.setDescription('Bans a user.')
+		.setDescription('Bans a user for sometimes a reason.')
 		.setDefaultMemberPermissions(PermissionFlagsBits.BanMembers)
 		.addUserOption(option =>
 			option.setName('user')
-				.setDescription('Bans a user for sometimes a reason.')
+				.setDescription('User to ban.')
 				.setRequired(true),
 		)
 		.addStringOption(option =>

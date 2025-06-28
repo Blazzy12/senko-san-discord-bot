@@ -4,11 +4,11 @@ module.exports = {
 	category: 'moderation',
 	data: new SlashCommandBuilder()
 		.setName('kick')
-		.setDescription('Kicks a user.')
+		.setDescription('Kicks a user for sometimes a reason.')
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.addUserOption(option =>
 			option.setName('user')
-				.setDescription('Kicks a user for sometimes a reason.')
+				.setDescription('User to kick.')
 				.setRequired(true),
 		)
 		.addStringOption(option =>

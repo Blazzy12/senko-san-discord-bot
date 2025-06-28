@@ -12,12 +12,25 @@ for (const folder of commandFolders) {
 	// Grab all the command files from the commands directory you created earlier
 	const commandsPath = path.join(foldersPath, folder);
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
 	// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
 	for (const file of commandFiles) {
 		const filePath = path.join(commandsPath, file);
-		const command = require(filePath);
-		if ('data' in command && 'execute' in command) {
-			commands.push(command.data.toJSON());
+		const commandModule = require(filePath);
+
+		// Check if the module exports an array of commands
+		if (Array.isArray(commandModule)) {
+			for (const command of commandModule) {
+				if ('data' in command && 'execute' in command) {
+					commands.push(command.data.toJSON());
+				} else {
+					console.log(`[WARNING] A command in array at ${filePath} is missing a required "data" or "execute" property.`);
+				}
+			}
+		}
+		// Handle single command export (original behavior)
+		else if ('data' in commandModule && 'execute' in commandModule) {
+			commands.push(commandModule.data.toJSON());
 		} else {
 			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 		}
