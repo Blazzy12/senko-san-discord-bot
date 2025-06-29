@@ -1,6 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, AttachmentBuilder } =  require('discord.js');
 
-const MODERATION_LOG_CHANNEL_ID = '';
+const MODERATION_LOG_CHANNEL_ID = '1388764830663442522';
 
 module.exports = {
 	category: 'moderation',
@@ -108,7 +108,7 @@ module.exports = {
 
 			// Tell them it's done
 			await interaction.editReply({
-				content: `Nya~ Senko has banished **${deletedMessages.size} dang message(s)!`,
+				content: `Nya~ Senko has banished **${deletedMessages.size}** dang message(s)!`,
 			});
 
 			// Delete message after 5 seconds
@@ -130,7 +130,7 @@ module.exports = {
 				)
 				.setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
 				.setTimestamp()
-				.setFooter({ text: `User ID: ${interaction.user.id} | Messages attached below` });
+				.setFooter({ text: `User ID: ${interaction.user.id} | Messages attached above` });
 
 			const logChannel = guild.channels.cache.get(MODERATION_LOG_CHANNEL_ID);
 			if (logChannel && logChannel.isTextBased()) {
