@@ -3,3 +3,4 @@ node/
 config.json
 important.txt
 commands/moderation/warnings.db
+commands/moderation/jwarnings.db

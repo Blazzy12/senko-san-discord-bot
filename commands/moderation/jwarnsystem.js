@@ -3,10 +3,8 @@ const Database = require('better-sqlite3');
 const path = require('path');
 
 // We're going to initialize the sqlite3 database
-const databasePath = path.join(__dirname, 'warnings.db');
+const databasePath = path.join(__dirname, 'jwarnings.db');
 const db = new Database(databasePath);
-
-const WARN_LOG_CHANNEL_ID = '1388444962625949706';
 
 // Create the warnings table if it were to not exist
 db.exec(`CREATE TABLE IF NOT EXISTS warnings (
@@ -91,7 +89,7 @@ function createWarningsEmbed(targetMember, userWarnings, page = 0, guild) {
 module.exports = [
 	{
 		data: new SlashCommandBuilder()
-			.setName('warn')
+			.setName('jwarn')
 			.setDescription('Distribute a warning to a member.')
 			.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 			.addUserOption(option =>
@@ -163,17 +161,6 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${targetMember.id}` });
 
-				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [warnEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
-					}
-				} else {
-					console.warn('Log channel not found or is not a text channel.');
-				}
-
 				if (silent) {
 					await interaction.reply({
 						embeds: [warnEmbed],
@@ -212,7 +199,7 @@ module.exports = [
 	},
 	{
 		data: new SlashCommandBuilder()
-			.setName('warnings')
+			.setName('jwarnings')
 			.setDescription('View the warnings of a member.')
 			.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 			.addUserOption(option =>
@@ -428,7 +415,7 @@ module.exports = [
 	},
 	{
 		data: new SlashCommandBuilder()
-			.setName('clearwarnings')
+			.setName('jclearwarnings')
 			.setDescription('Clear the warnings of a member.')
 			.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 			.addUserOption(option =>
@@ -480,18 +467,6 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${targetMember.id}` });
 
-				// Log to channel
-				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [clearEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
-					}
-				} else {
-					console.warn('Log channel not found or is not a text channel.');
-				}
-
 				// Reply
 				await interaction.reply({
 					embeds: [clearEmbed],
@@ -508,7 +483,7 @@ module.exports = [
 	},
 	{
 		data: new SlashCommandBuilder()
-			.setName('removewarn')
+			.setName('jremovewarn')
 			.setDescription('Clear the warn of a member.')
 			.setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 			.addStringOption(option =>
@@ -568,18 +543,6 @@ module.exports = [
 					.setThumbnail(targetUser ? targetUser.user.displayAvatarURL({ dynamic: true }) : null)
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${removedWarning.user_id}` });
-
-				// Log to channel
-				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [removeEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
-					}
-				} else {
-					console.warn('Log channel not found or is not a text channel.');
-				}
 
 				// Reply
 				await interaction.reply({
