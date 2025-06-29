@@ -63,8 +63,10 @@ module.exports = {
 				});
 			}
 
+			const finalReason = `Kicked by ${interaction.user.username} | ${reason}`;
+
 			// Kick the user first
-			await targetMember.kick({ reason });
+			await targetMember.kick({ reason: finalReason });
 
 			const kickEmbed = new EmbedBuilder()
 				.setTitle('🔨 User Kicked')
