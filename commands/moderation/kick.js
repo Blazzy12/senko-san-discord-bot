@@ -1,5 +1,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 
+const KICK_LOG_CHANNEL_ID = '1388319341828903124';
+
 module.exports = {
 	category: 'moderation',
 	data: new SlashCommandBuilder()
@@ -25,8 +27,6 @@ module.exports = {
 		const target = options.getUser('user');
 		const reason = options.getString('reason') ?? 'No reason provided.';
 		const silent = options.getBoolean('silent') ?? false;
-
-		const KICK_LOG_CHANNEL_ID = '1388319341828903124';
 
 		// Checking if the user has permission to kick a user.
 		if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {

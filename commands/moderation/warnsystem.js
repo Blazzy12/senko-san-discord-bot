@@ -90,6 +90,7 @@ function createWarningsEmbed(targetMember, userWarnings, page = 0, guild) {
 
 module.exports = [
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('warn')
 			.setDescription('Distribute a warning to a member.')
@@ -211,6 +212,7 @@ module.exports = [
 		},
 	},
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('warnings')
 			.setDescription('View the warnings of a member.')
@@ -427,6 +429,7 @@ module.exports = [
 		},
 	},
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('clearwarnings')
 			.setDescription('Clear the warnings of a member.')
@@ -507,6 +510,7 @@ module.exports = [
 		},
 	},
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('removewarn')
 			.setDescription('Clear the warn of a member.')

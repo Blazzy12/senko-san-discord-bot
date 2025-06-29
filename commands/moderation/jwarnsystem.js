@@ -88,6 +88,7 @@ function createWarningsEmbed(targetMember, userWarnings, page = 0, guild) {
 
 module.exports = [
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jwarn')
 			.setDescription('Distribute a warning to a member.')
@@ -198,6 +199,7 @@ module.exports = [
 		},
 	},
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jwarnings')
 			.setDescription('View the warnings of a member.')
@@ -414,6 +416,7 @@ module.exports = [
 		},
 	},
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jclearwarnings')
 			.setDescription('Clear the warnings of a member.')
@@ -482,6 +485,7 @@ module.exports = [
 		},
 	},
 	{
+		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jremovewarn')
 			.setDescription('Clear the warn of a member.')
