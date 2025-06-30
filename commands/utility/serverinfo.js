@@ -66,11 +66,11 @@ module.exports = {
 					console.log(`Failed fetching member count for ${guild.name}, use falback`);
 
 					// Fallback
-					if {cached} {
+					if (cached) {
 						humanCount = cached.humanCount;
 						botCount = cached.botCount;
 						fromCache = true;
-						console.log(`Using count fallback for ${guild.name}`)
+						console.log(`Using count fallback for ${guild.name}`);
 					}
 				}
 			}
