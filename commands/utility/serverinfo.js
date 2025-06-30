@@ -2,7 +2,7 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 // Cache
 const memberCountCache = new Map();
-const CACHE_DURATION = 30 * 60 * 1000;
+const CACHE_DURATION = 5 * 60 * 1000;
 
 module.exports = {
 	category: 'utility',

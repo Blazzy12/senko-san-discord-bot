@@ -12,9 +12,10 @@ const client = new Client({
   	intents: [
 		GatewayIntentBits.Guilds,
 		GatewayIntentBits.GuildMessages,
+		GatewayIntentBits.GuildMembers,
 		GatewayIntentBits.MessageContent,
 	],
-	partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+	partials: [Partials.Message, Partials.Channel, Partials.Reaction, Partials.User, Partials.GuildMember],
 });
 
 client.commands = new Collection();
