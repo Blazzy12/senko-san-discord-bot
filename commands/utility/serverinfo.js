@@ -1,5 +1,9 @@
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
+// Cache
+const memberCountCache = new Map();
+const CACHE_DURATION = 30 * 60 * 1000;
+
 module.exports = {
 	category: 'utility',
 	data: new SlashCommandBuilder()
@@ -26,20 +30,49 @@ module.exports = {
 			const boostLevel = guild.premiumTier;
 			const boostCount = guild.premiumSubscriptionCount;
 
+			// Check Cache
+			const cacheKey = guild.id;
+			const cached = memberCountCache.get(cacheKey);
+			const now = Date.now();
+
 			// Differentiate bots from humans
 			let humanCount = 'Unable to fetch';
 			let botCount = 'Unable to fetch';
+			let fromCache = false;
 
-			try {
-				const members = await guild.members.fetch({ time: 60000 });
-				humanCount = members.filter(member => !member.user.bot).size;
-				botCount = members.filter(member => member.user.bot).size;
-			} catch (error) {
-				console.error('Failed to fetch members:', error);
+			if (cached && (now - cached.timestamp) < CACHE_DURATION) {
+				humanCount = cached.humanCount;
+				botCount = cached.botCount;
+				fromCache = true;
 
-				// Fallback
-				humanCount = 'Unavailable';
-				botCount = 'Unavailable';
+				console.log(`Using cached member count for ${guild.name}`);
+			} else {
+				console.log(`Fetching counts for ${guild.name}`);
+
+				try {
+					const members = await guild.members.fetch({ time: 30000 });
+					humanCount = members.filter(member => !member.user.bot).size;
+					botCount = members.filter(member => member.user.bot).size;
+
+					// Cache results
+					memberCountCache.set(cacheKey, {
+						humanCount,
+						botCount,
+						timestamp: now,
+					});
+
+					console.log(`Got cached member count for ${guild.name}`);
+				} catch (error) {
+					console.log(`Failed fetching member count for ${guild.name}, use falback`);
+
+					// Fallback
+					if {cached} {
+						humanCount = cached.humanCount;
+						botCount = cached.botCount;
+						fromCache = true;
+						console.log(`Using count fallback for ${guild.name}`)
+					}
+				}
 			}
 
 			// Check for features
