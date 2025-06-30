@@ -31,7 +31,7 @@ module.exports = {
 			let botCount = 'Unable to fetch';
 
 			try {
-				const members = await guild.members.fetch({ time: 20000 });
+				const members = await guild.members.fetch({ time: 60000 });
 				humanCount = members.filter(member => !member.user.bot).size;
 				botCount = members.filter(member => member.user.bot).size;
 			} catch (error) {
