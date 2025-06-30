@@ -7,6 +7,9 @@ module.exports = {
 		.setDescription('Fetches and posts the server information.'),
 	async execute(interaction) {
 		try {
+			// Defer
+			await interaction.deferReply();
+
 			const { guild } = interaction;
 
 			// Grab statistics
@@ -80,7 +83,7 @@ module.exports = {
 			}
 
 			// Reply
-			await interaction.reply({
+			await interaction.editReply({
 				embeds: [serverInfoEmbed],
 			});
 		} catch (error) {
