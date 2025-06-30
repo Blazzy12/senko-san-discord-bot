@@ -1,3 +1,6 @@
+// Run this before anything else
+require('./deploy-commands.js');
+
 // Require the necessary discord.js classes
 const fs = require('node:fs');
 const path = require('node:path');
