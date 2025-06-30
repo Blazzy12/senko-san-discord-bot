@@ -63,7 +63,7 @@ module.exports = {
 				});
 			}
 
-			const finalReason = `Kicked by ${interaction.user.username} | ${reason}`;
+			const finalReason = `Banned by ${interaction.user.username} | ${reason}`;
 
 			// Ban the user first
 			await targetMember.ban({ reason: finalReason });
