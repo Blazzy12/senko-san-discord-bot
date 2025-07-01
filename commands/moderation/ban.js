@@ -31,9 +31,7 @@ module.exports = {
 
 		if (isSlashCommand) {
 			interaction = interactionOrMessage;
-			guild = interaction.guild;
-			member = interaction.member;
-			user = interaction.user;
+			{ guild, member, user } = interaction;
 
 			target = interaction.options.getUser('user');
 			reason = interaction.options.getString('reason') ?? 'No reason provided.';
@@ -41,9 +39,7 @@ module.exports = {
 		} else {
 			// Text command parsing
 			const message = interactionOrMessage;
-			guild = message.guild;
-			member = message.member;
-			user = message.author;
+			{ guild, member, user } = message;
 
 
 			// Check if they're using it right
