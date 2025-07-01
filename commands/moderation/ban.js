@@ -27,11 +27,11 @@ module.exports = {
 		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 		// Declare vars
-		let target, reason, silent, guild, member, user, interaction;
+		let target, reason, silent, interaction;
 
 		if (isSlashCommand) {
 			interaction = interactionOrMessage;
-			{ guild, member, user } = interaction;
+			const { guild, member, user } = interaction;
 
 			target = interaction.options.getUser('user');
 			reason = interaction.options.getString('reason') ?? 'No reason provided.';
@@ -39,8 +39,7 @@ module.exports = {
 		} else {
 			// Text command parsing
 			const message = interactionOrMessage;
-			{ guild, member, user } = message;
-
+			const { guild, member, user } = message;
 
 			// Check if they're using it right
 			if (!args || args.length < 1) {
