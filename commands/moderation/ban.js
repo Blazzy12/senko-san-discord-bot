@@ -128,7 +128,7 @@ module.exports = {
 				.setColor(0xFF0000)
 				.addFields(
 					{ name: 'Banned User', value: `${target.username}`, inline: true },
-					{ name: 'Banned by', value: `${user.username}${member.displayName ? ` (${member.displayName})` : ''}`, inline: true },
+					{ name: 'Banned by', value: `${user.username} (${user.displayName})`, inline: true },
 					{ name: 'Reason', value: reason, inline: false },
 					{ name: 'Silent Ban', value: silent ? 'Yes' : 'No', inline: true },
 				)
