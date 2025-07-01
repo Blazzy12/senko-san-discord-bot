@@ -48,7 +48,7 @@ module.exports = {
 
 			// Check if they're using it right
 			if (!args || args.length < 1) {
-				return await message.reply('Usage: `,ban <user> || <user_Id>` [reason]');
+				return await message.reply('Usage: `,ban <user> || <user_Id> [reason]`');
 			}
 
 			// Parse args
