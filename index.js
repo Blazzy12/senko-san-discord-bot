@@ -19,6 +19,7 @@ const client = new Client({
 });
 
 client.commands = new Collection();
+client.textCommands = new Collection();
 client.cooldowns = new Collection();
 
 const foldersPath = path.join(__dirname, 'commands');
@@ -36,6 +37,10 @@ for (const folder of commandFolders) {
 			for (const command of commandModule) {
 				if ('data' in command && 'execute' in command) {
 					client.commands.set(command.data.name, command);
+					// Also add to text commands if enabled
+					if (command.textEnabled) {
+						client.textCommands.set(command.data.name, command);
+					}
 				} else {
 					console.log(`[WARNING] A command in array at ${filePath} is missing a required "data" or "execute" property.`);
 				}
@@ -44,6 +49,10 @@ for (const folder of commandFolders) {
 		// Handle single command export (original behavior)
 		else if ('data' in commandModule && 'execute' in commandModule) {
 			client.commands.set(commandModule.data.name, commandModule);
+			// Also add to text commands if enabled
+			if (commandModule.textEnabled) {
+				client.textCommands.set(commandModule.data.name, commandModule);
+			}
 		} else {
 			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
 		}
