@@ -154,7 +154,7 @@ module.exports = {
 			} else {
 				const content = `**Banned** ${target.username} for **Reason:** ${reason}`;
 				return isSlashCommand
-					? await interactionOrMessage.reply({ content, ephemeral: true })
+					? await interactionOrMessage.reply({ content, ephemeral: false })
 					: await interactionOrMessage.reply(content);
 			}
 
