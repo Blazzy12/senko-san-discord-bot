@@ -4,9 +4,10 @@ const KICK_LOG_CHANNEL_ID = '1388319341828903124';
 
 module.exports = {
 	category: 'moderation',
+	textEnabled: true,
 	data: new SlashCommandBuilder()
 		.setName('kick')
-		.setDescription('Kicks a user for sometimes a reason.')
+		.setDescription('kick a user for sometimes a reason.')
 		.setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
 		.addUserOption(option =>
 			option.setName('user')
@@ -21,59 +22,113 @@ module.exports = {
 			option.setName('silent')
 				.setDescription('Is this kick silent?'),
 		),
-	async execute(interaction) {
-		const { options, guild } = interaction;
+	async execute(interactionOrMessage, args) {
+		// Check if slash or text
+		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-		const target = options.getUser('user');
-		const reason = options.getString('reason') ?? 'No reason provided.';
-		const silent = options.getBoolean('silent') ?? false;
+		// Declare vars
+		let target, reason, silent, guild, member, user, interaction;
+
+		if (isSlashCommand) {
+			interaction = interactionOrMessage;
+			guild = interaction.guild;
+			member = interaction.member;
+			user = interaction.user;
+
+			target = interaction.options.getUser('user');
+			reason = interaction.options.getString('reason') ?? 'No reason provided.';
+			silent = interaction.options.getBoolean('silent') ?? false;
+		} else {
+			// Text command parsing
+			const message = interactionOrMessage;
+			guild = message.guild;
+			member = message.member;
+			user = message.author;
+
+
+			// Check if they're using it right
+			if (!args || args.length < 1) {
+				return await message.reply('Usage: `,kick <user> || <user_Id> [reason]`');
+			}
+
+			// Parse args
+			const userMention = args[0];
+			const reasonArgs = args.slice(1);
+			reason = reasonArgs.length > 0 ? reasonArgs.join(' ') : 'No reason provided.';
+			silent = false;
+
+			// Extract
+			const userMatch = userMention.match(/^<@!?(\d+)>$/) || userMention.match(/^(\d+)$/);
+			if (!userMatch) {
+				return await message.reply('Please provide a valid user or user_Id.');
+			}
+
+			try {
+				target = await message.client.users.fetch(userMatch[1]);
+			} catch (error) {
+				return await message.reply('Could not find that user.');
+			}
+		}
+
+
 
 		// Checking if the user has permission to kick a user.
-		if (!interaction.member.permissions.has(PermissionFlagsBits.KickMembers)) {
-			return await interaction.reply({
-				content: 'You do not have permission to kick members.',
-				ephemeral: true,
-			});
+		if (!member.permissions.has(PermissionFlagsBits.KickMembers)) {
+			const content = 'You do not have permission to kick members.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
 		}
 
 		if (!guild.members.me.permissions.has(PermissionFlagsBits.KickMembers)) {
-			return await interaction.reply({
-				content: 'I do not have permission to kick members.',
-				ephemeral: true,
-			});
+			const content = 'I Senko do not have permission to kick members.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
 		}
 
 		try {
 			// Grabbing guildId, members and then fetching the targets id
-			const targetMember = await guild.members.fetch(target.id);
-
-			// Checking role hierarchy between bot
-			if (!targetMember.kickable) {
-				return await interaction.reply({
-					content: 'I cannot kick this user- as they may have a higher role than me or be the server owner; or could even of been myself that you were trying to kick?',
-					ephemeral: true,
-				});
+			let targetMember;
+			try {
+				targetMember = await guild.members.fetch(target.id);
+			} catch (error) {
+				// If the user isn't in the server we will still kick by ID
+				targetMember = null;
 			}
 
-			// Checking role hierarchy between user
-			if (interaction.member.roles.highest.position <= targetMember.roles.highest.position && guild.ownerId !== interaction.user.id) {
-				return await interaction.reply({
-					content: 'You cannot kick someone with an equal or higher role than you.',
-					ephemeral: true,
-				});
+			if (targetMember) {
+				// Checking role hierarchy between bot
+				if (!targetMember.kickable) {
+					const content = 'I cannot kick this user- as they may have a higher role than me or be the server owner; or could even of been myself that you were trying to kick?';
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
+				}
+
+				// Checking role hierarchy between user
+				if (member.roles.highest.position <= targetMember.roles.highest.position && guild.ownerId !== user.id) {
+					const content = 'You cannot kick someone with an equal or higher role than you.';
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
+				}
 			}
 
-			const finalReason = `Kicked by ${interaction.user.username} | ${reason}`;
+			const finalReason = `Kicked by ${user.username} | ${reason}`;
 
-			// Kick the user first
-			await targetMember.kick({ reason: finalReason });
+			if (targetMember) {
+				await targetMember.kick({ reason: finalReason });
+			} else {
+				await guild.members.kick(target.id, { reason: finalReason });
+			}
 
 			const kickEmbed = new EmbedBuilder()
 				.setTitle('🔨 User Kicked')
-				.setColor(0xFFA500)
+				.setColor(0xFF0000)
 				.addFields(
 					{ name: 'Kicked User', value: `${target.username} (${target.displayName})`, inline: true },
-					{ name: 'Kicked by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+					{ name: 'Kicked by', value: `${user.username} (${user.displayName})`, inline: true },
 					{ name: 'Reason', value: reason, inline: false },
 					{ name: 'Silent Kick', value: silent ? 'Yes' : 'No', inline: true },
 				)
@@ -94,23 +149,21 @@ module.exports = {
 
 			// Then send the appropriate response
 			if (silent) {
-				await interaction.reply({
-					content: `**SILENT: Kicked** ${target.username} for **Reason:** ${reason}`,
-					ephemeral: true,
-				});
+				const content = `**SILENT: Kicked** ${target.username} for **Reason:** ${reason}`;
+				return await interactionOrMessage.reply({ content, ephemeral: true });
 			} else {
-				await interaction.reply({
-					content: `**Kicked** ${target.username} for **Reason:** ${reason}`,
-					ephemeral: false,
-				});
+				const content = `**Kicked** ${target.username} for **Reason:** ${reason}`;
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 		} catch (error) {
 			console.error('Error kicking user:', error);
-			await interaction.reply({
-				content: 'There was an error trying to kick this user.',
-				ephemeral: true,
-			});
+			const content = 'There was an error trying to kick this user.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
 		}
 	},
 };
