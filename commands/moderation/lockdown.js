@@ -18,15 +18,15 @@ function getLockedChannels() {
 // Initialize the sticky message handler
 function initializeStickyHandler(client) {
 	clientInstance = client;
-	
+
 	client.on('messageCreate', async (message) => {
 		// Ignore bot messages to prevent infinite loops
 		if (message.author.bot) return;
-		
+
 		// Check if this message was sent in a locked channel
 		if (lockdownChannels.has(message.channel.id)) {
 			const lockInfo = lockdownChannels.get(message.channel.id);
-			
+
 			try {
 				// Try to delete the old sticky message
 				if (lockInfo.messageId) {
@@ -38,7 +38,7 @@ function initializeStickyHandler(client) {
 						console.log('Old sticky message not found or already deleted');
 					}
 				}
-				
+
 				// Send new sticky message
 				const newStickyMessage = await message.channel.send({
 					embeds: [{
@@ -47,15 +47,15 @@ function initializeStickyHandler(client) {
 						description: 'This channel has been locked. Only users with specific roles can send messages.',
 						timestamp: new Date().toISOString(),
 						footer: {
-							text: 'Use /unlock to unlock the channel',
+							text: 'Use /unlock or ,unlock to unlock the channel',
 						},
 					}],
 				});
-				
+
 				// Update the stored message ID
 				lockInfo.messageId = newStickyMessage.id;
 				lockdownChannels.set(message.channel.id, lockInfo);
-				
+
 			} catch (error) {
 				console.error('Error handling sticky message:', error);
 			}
@@ -65,41 +65,61 @@ function initializeStickyHandler(client) {
 
 module.exports = [
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('lock')
 			.setDescription('Locks the current channel')
 			.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
-		async execute(interaction) {
-			// My love
-			const { guild, channel } = interaction;
+		async execute(interactionOrMessage) {
+			// Check if slash or text
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
+
+			// Declare vars
+			let guild, channel, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				channel = interaction.channel;
+				member = interaction.member;
+				user = interaction.user;
+			} else {
+				const message = interactionOrMessage;
+				guild = message.guild;
+				channel = message.channel;
+				member = message.member;
+				user = message.author;
+			}
 
 			// Checks if user has permissions
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
-				return await interaction.reply({
-					content: 'Senko says you do not have permission to run this command nya~',
-					ephemeral: true,
-				});
+			if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+				const content = 'Senko says you do not have permission to run this command nya~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Checks if the bot has permissions
 			if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
-				return await interaction.reply({
-					content: 'I Senko nya~ do not have permission to do this!',
-					ephemeral: true,
-				});
+				const content = 'I Senko nya~ do not have permission to do this!';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Last base check for if the channel has already been locked
 			if (lockdownChannels.has(channel.id)) {
-				return await interaction.reply({
-					content: 'You silly billy nyaa~ this channel is already locked!',
-					ephemeral: true,
-				});
+				const content = 'You silly billy nyaa~ this channel is already locked!';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Defer the reply to prevent timeout
-			await interaction.deferReply({ ephemeral: true });
+			if (isSlashCommand) {
+				await interactionOrMessage.deferReply({ ephemeral: true });
+			}
 
 			try {
 				// First we're going to need to grab the everyone role
@@ -130,7 +150,7 @@ module.exports = [
 						description: 'This channel has been locked. Only users with specific roles can send messages.',
 						timestamp: new Date().toISOString(),
 						footer: {
-							text: 'Use /unlock to unlock the channel',
+							text: 'Use /unlock or ,unlock to unlock the channel',
 						},
 					}],
 				});
@@ -147,9 +167,9 @@ module.exports = [
 					.setColor(0xFF0000)
 					.addFields(
 						{ name: 'Channel', value: `${channel.name} (<#${channel.id}>)`, inline: true },
-						{ name: 'Locked by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+						{ name: 'Locked by', value: `${user.username} (${user.displayName})`, inline: true },
 					)
-					.setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
+					.setThumbnail(user.displayAvatarURL({ dynamic: true }))
 					.setTimestamp()
 					.setFooter({ text: `Channel ID: ${channel.id}` });
 
@@ -165,54 +185,75 @@ module.exports = [
 				}
 
 				// Send the confirm response
-				await interaction.editReply({
-					content: `**Locked** ${channel.name} channel.`,
-				});
+				const content = `**Locked** ${channel.name} channel.`;
+				return isSlashCommand
+					? await interactionOrMessage.editReply({ content })
+					: await interactionOrMessage.reply(content);
 
 			} catch (error) {
 				console.error('There has been an error with the lock command:', error);
-				return await interaction.editReply({
-					content: 'Uh-oh I do not feel good (error)',
-				});
+				const content = 'Uh-oh I do not feel good (error)';
+				return isSlashCommand
+					? await interactionOrMessage.editReply({ content })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('unlock')
 			.setDescription('Unlocks the current channel')
 			.setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
-		async execute(interaction) {
-			// My love
-			const { guild, channel } = interaction;
+		async execute(interactionOrMessage) {
+			// Check if slash or text
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
+			// Declare vars
+			let guild, channel, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				channel = interaction.channel;
+				member = interaction.member;
+				user = interaction.user;
+			} else {
+				const message = interactionOrMessage;
+				guild = message.guild;
+				channel = message.channel;
+				member = message.member;
+				user = message.author;
+			}
 			// Checks if user has permissions
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ManageMessages)) {
-				return await interaction.reply({
-					content: 'Senko says you do not have permission to run this command nya~',
-					ephemeral: true,
-				});
+			if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
+				const content = 'Senko says you do not have permission to run this command nya~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Checks if the bot has permissions
 			if (!guild.members.me.permissions.has(PermissionFlagsBits.ManageChannels)) {
-				return await interaction.reply({
-					content: 'I Senko nya~ do not have permission to do this!',
-					ephemeral: true,
-				});
+				const content = 'I Senko nya~ do not have permission to do this!';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Last base check for if the channel has already been locked
 			if (!lockdownChannels.has(channel.id)) {
-				return await interaction.reply({
-					content: 'You silly billy nyaa~ this channel is not currently locked!',
-					ephemeral: true,
-				});
+				const content = 'You silly billy nyaa~ this channel is not currently locked!';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Defer the reply to prevent timeout
-			await interaction.deferReply({ ephemeral: false });
+			if (isSlashCommand) {
+				await interactionOrMessage.deferReply({ ephemeral: false });
+			}
 
 			try {
 				// First we're going to need to grab the everyone role
@@ -252,9 +293,9 @@ module.exports = [
 					.setColor(0x00ff00)
 					.addFields(
 						{ name: 'Channel', value: `${channel.name} (<#${channel.id}>)`, inline: true },
-						{ name: 'Unlocked by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+						{ name: 'Unlocked by', value: `${user.username} (${user.displayName})`, inline: true },
 					)
-					.setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
+					.setThumbnail(user.displayAvatarURL({ dynamic: true }))
 					.setTimestamp()
 					.setFooter({ text: `Channel ID: ${channel.id}` });
 
@@ -270,15 +311,16 @@ module.exports = [
 				}
 
 				// Send the confirm response
-				await interaction.editReply({
-					embeds: [unlockedEmbed],
-				});
+				return isSlashCommand
+					? await interactionOrMessage.editReply({ embeds: [unlockedEmbed] })
+					: await interactionOrMessage.reply({ embeds: [unlockedEmbed] });
 
 			} catch (error) {
 				console.error('There has been an error with the Unlock command:', error);
-				return await interaction.editReply({
-					content: 'Uh-oh I do not feel good (error)',
-				});
+				const content = 'Uh-oh I do not feel good (error)';
+				return isSlashCommand
+					? await interactionOrMessage.editReply({ content })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
