@@ -88,6 +88,7 @@ function createWarningsEmbed(targetMember, userWarnings, page = 0, guild) {
 
 module.exports = [
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jwarn')
@@ -106,73 +107,117 @@ module.exports = [
 				option.setName('silent')
 					.setDescription('Is this warn silent?'),
 			),
-		async execute(interaction) {
-			const { options, guild } = interaction;
+		async execute(interactionOrMessage, args) {
 
-			const targetMember = options.getUser('user');
-			const reason = options.getString('reason') ?? 'No reason provided.';
-			const silent = options.getBoolean('silent') ?? false;
+			// Check if slash
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
+
+			// Declare Vars
+			let target, reason, silent, guild, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+
+				target = interaction.options.getUser('user');
+				reason = interaction.options.getString('reason') ?? 'No reason provided.';
+				silent = interaction.options.getBoolean('silent') ?? false;
+			} else {
+				// Text command parsing
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
+
+				// Check if usage is right
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,jwarn <user> || <user_Id> [reason]`');
+				}
+
+				// Parse args
+				const userMention = args[0];
+				const reasonArgs = args.slice(1);
+				reason = reasonArgs.length > 0 ? reasonArgs.join(' ') : 'No reason provided';
+				silent = false;
+
+				// Extract
+				const userMatch = userMention.match(/^<@!?(\d+)>$/) || userMention.match(/^(\d+)$/);
+				if (!userMatch) {
+					return await message.reply('Please provide a valid user or user_Id.');
+				}
+
+				try {
+					target = await message.client.users.fetch(userMatch[1]);
+				} catch (error) {
+					return await message.reply('Could not find that user.');
+				}
+			}
 
 			// We're first going to check if the user has permission to warn a user.
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'You do not have permission to warn.',
-					ephemeral: true,
-				});
+			if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+				const content = 'You do not have permission to warn.';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			// Now we're going to check if the bot has permission to warn.
 			if (!guild.members.me.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'I Senko-San do not have permission to warn nya~',
-					ephemeral: true,
-				});
+				const content = 'I Senko-San do not have permission to warn nya~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			try {
-				// Check if user is a bot
-				if (targetMember.bot) {
-					return await interaction.reply({
-						content: 'You cannot warn bots!',
-						ephemeral: true,
-					});
+				// Grab guildId, then fetch
+				let targetMember;
+				try {
+					targetMember = await guild.members.fetch(target.id);
+				} catch (error) {
+					// If the user isn't in the server we can still warn via ID
+					targetMember = null;
 				}
 
-				// Check if the moderator is trying to warn themselves
-				if (targetMember.id == interaction.user.id) {
-					return await interaction.reply({
-						content: 'You cannot warn yourself!',
-						ephemeral: true,
-					});
+				if (targetMember) {
+					// Check if user is a bot
+					if (targetMember.bot) {
+						const content = 'You cannot warn bots!';
+						return isSlashCommand
+							? await interactionOrMessage.reply({ content, ephemeral: true })
+							: await interactionOrMessage.reply(content);
+					}
+					// Check if the moderator is trying to warn themselves
+					if (targetMember.id == user.id) {
+						const content = 'You cannot warn yourself!';
+						return isSlashCommand
+							? await interactionOrMessage.reply({ content, ephemeral: true })
+							: await interactionOrMessage.reply(content);
+					}
 				}
 
-				const warning = addWarning(targetMember.id, interaction.user.id, reason, guild.id);
-				const userWarnings = getUserWarnings(targetMember.id, guild.id);
+				if (targetMember) {
+					const warning = addWarning(targetMember.id, user.id, reason, guild.id);
+					const userWarnings = getUserWarnings(targetMember.id, guild.id);
+				} else {
+					const warning = addWarning(target.id, user.id, reason, guild.id);
+					const userWarnings = getUserWarnings(target.id, guild.id);
+				}
 
 				const warnEmbed = new EmbedBuilder()
 					.setColor(0xffff00)
 					.setTitle('⚠️ User Warned!')
 					.addFields(
-						{ name: 'User', value: `${targetMember.username} (${targetMember.displayName})`, inline: true },
-						{ name: 'Warned by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+						{ name: 'User', value: `${target.username} (${target.displayName})`, inline: true },
+						{ name: 'Warned by', value: `${user.username} (${user.displayName})`, inline: true },
 						{ name: 'Reason', value: reason, inline: false },
 						{ name: 'Silent Warn', value: silent ? 'Yes' : 'No', inline: true },
 					)
-					.setThumbnail(targetMember.displayAvatarURL({ dynamic: true }))
+					.setThumbnail(target.displayAvatarURL({ dynamic: true }))
 					.setTimestamp()
-					.setFooter({ text: `User ID: ${targetMember.id}` });
-
-				if (silent) {
-					await interaction.reply({
-						embeds: [warnEmbed],
-						ephemeral: true,
-					});
-				} else {
-					await interaction.reply({
-						embeds: [warnEmbed],
-						ephemeral: false,
-					});
-				}
+					.setFooter({ text: `User ID: ${target.id}` });
 
 				try {
 					const dmEmbed = new EmbedBuilder()
@@ -180,25 +225,34 @@ module.exports = [
 						.setTitle('⚠️ You have been warned!')
 						.addFields(
 							{ name: 'Server', value: guild.name, inline: true },
-							{ name: 'Moderator', value: interaction.user.displayName, inline: true },
+							{ name: 'Moderator', value: user.displayName, inline: true },
 							{ name: 'Reason', value: reason, inline: false },
 						)
 						.setTimestamp();
 
-					await targetMember.send({ embeds: [dmEmbed] });
+					await target.send({ embeds: [dmEmbed] });
 				} catch (error) {
-					console.error(`Could not DM user ${targetMember.username}`, error);
+					console.error(`Could not DM user ${target.username}`, error);
+				}
+
+				if (silent) {
+					return await interactionOrMessage.reply({ embeds: [warnEmbed], ephemeral: true });
+				} else {
+					return isSlashCommand
+						? await interactionOrMessage.reply({ embeds: [warnEmbed], ephemeral: false })
+						: await interactionOrMessage.reply({ embeds: [warnEmbed] });
 				}
 			} catch (error) {
 				console.error('Error warning user:', error);
-				await interaction.reply({
-					content: 'There was an error trying to warn this user.',
-					ephemeral: true,
-				});
+				const content = 'There was an error trying to warn this user.';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jwarnings')
@@ -213,48 +267,86 @@ module.exports = [
 				option.setName('silent')
 					.setDescription('Is this check silent?'),
 			),
-		async execute(interaction) {
-			const { options, guild } = interaction;
-			const targetMember = options.getUser('user');
-			const silent = options.getBoolean('silent') ?? false;
+		async execute(interactionOrMessage, args) {
+
+			// Check if slash or not
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
+
+			// Declare vars
+			let target, silent, guild, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+
+				target = interaction.options.getUser('user');
+				silent = interaction.options.getBoolean('silent') ?? false;
+			} else {
+				// Text command parsing
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
+
+				// Check if they're using it right
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,jwarnings <user> || <user_Id>`');
+				}
+
+				// Parse args
+				const userMention = args[0];
+				silent = false;
+
+				// Extract
+				const userMatch = userMention.match(/^<@!?(\d+)>$/) || userMention.match(/^(\d+)$/);
+				if (!userMatch) {
+					return await message.reply('Please provide a valid user or user_Id.');
+				}
+
+				try {
+					target = await message.client.users.fetch(userMatch[1]);
+				} catch (error) {
+					return await message.reply('Could not find that user.');
+				}
+			}
 
 			// Check permissions
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'You do not have permission to view warnings of a member.',
-					ephemeral: true,
-				});
+			if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+				const content = 'You do not have permission to view warnings of a member.';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			try {
-				const userWarnings = getUserWarnings(targetMember.id, guild.id);
+				const userWarnings = getUserWarnings(target.id, guild.id);
 
 				// Handle case with no warnings
 				if (userWarnings.length === 0) {
 					const noWarningsEmbed = new EmbedBuilder()
 						.setColor(0x00ff00)
 						.setTitle('✅ No Warnings Found')
-						.setDescription(`${targetMember.username} has no warnings in this server.`)
-						.setThumbnail(targetMember.displayAvatarURL({ dynamic: true }))
+						.setDescription(`${target.username} has no warnings in this server.`)
+						.setThumbnail(target.displayAvatarURL({ dynamic: true }))
 						.setTimestamp()
-						.setFooter({ text: `User ID: ${targetMember.id}` });
+						.setFooter({ text: `User ID: ${target.id}` });
 
-
-					return await interaction.reply({
-						embeds: [noWarningsEmbed],
-						ephemeral: silent,
-					});
+					return isSlashCommand
+						? await interactionOrMessage.reply({ embeds: [noWarningsEmbed], ephemeral: silent })
+						: await interactionOrMessage.reply({ embeds: [noWarningsEmbed] });
 				}
 
 				// Handle case with 5 or fewer warnings (simple embed)
 				if (userWarnings.length <= 5) {
 					const warningsEmbed = new EmbedBuilder()
 						.setColor(0xffff00)
-						.setTitle(`⚠️ Warnings for ${targetMember.username}`)
+						.setTitle(`⚠️ Warnings for ${target.username}`)
 						.setDescription(`Total warnings: **${userWarnings.length}**`)
-						.setThumbnail(targetMember.displayAvatarURL({ dynamic: true }))
+						.setThumbnail(target.displayAvatarURL({ dynamic: true }))
 						.setTimestamp()
-						.setFooter({ text: `User ID: ${targetMember.id}` });
+						.setFooter({ text: `User ID: ${target.id}` });
 
 					// Add warning fields
 					for (let i = 0; i < userWarnings.length; i++) {
@@ -273,15 +365,14 @@ module.exports = [
 						});
 					}
 
-					return await interaction.reply({
-						embeds: [warningsEmbed],
-						ephemeral: silent,
-					});
+					return isSlashCommand
+						? await interactionOrMessage.reply({ embeds: [warningsEmbed], ephemeral: silent })
+						: await interactionOrMessage.reply({ embeds: [warningsEmbed] });
 				}
 
 				// Handle case with more than 5 warnings
 				let currentPage = 0;
-				const { warningsEmbed, startIndex, endIndex, totalPages } = createWarningsEmbed(targetMember, userWarnings, currentPage, guild);
+				const { warningsEmbed, startIndex, endIndex, totalPages } = createWarningsEmbed(target, userWarnings, currentPage, guild);
 
 				// Add warnings to current page
 				for (let i = startIndex; i < endIndex; i++) {
@@ -315,11 +406,7 @@ module.exports = [
 							.setDisabled(currentPage === totalPages - 1),
 					);
 
-				const response = await interaction.reply({
-					embeds: [warningsEmbed],
-					components: [row],
-					ephemeral: silent,
-				});
+				const response = await interactionOrMessage.reply({ embeds: [warningsEmbed], components: [row], ephemeral: silent });
 
 				// Handle button interactions 5 minutes
 				const collector = response.createMessageComponentCollector({
@@ -328,7 +415,7 @@ module.exports = [
 
 				collector.on('collect', async (buttonInteraction) => {
 					// Only allow the command user to use buttons
-					if (buttonInteraction.user.id !== interaction.user.id) {
+					if (buttonInteraction.user.id !== user.id) {
 						return await buttonInteraction.reply({
 							content: 'You cannot use these buttons.',
 							ephemeral: true,
@@ -343,7 +430,7 @@ module.exports = [
 					}
 
 					// Create new embed for current page
-					const { warningsEmbed: newEmbed, startIndex: newStart, endIndex: newEnd } = createWarningsEmbed(targetMember, userWarnings, currentPage, guild);
+					const { warningsEmbed: newEmbed, startIndex: newStart, endIndex: newEnd } = createWarningsEmbed(target, userWarnings, currentPage, guild);
 
 					// Add warnings to new embed
 					for (let i = newStart; i < newEnd; i++) {
@@ -408,14 +495,15 @@ module.exports = [
 
 			} catch (error) {
 				console.error('Error viewing user warnings:', error);
-				await interaction.reply({
-					content: 'There was an error checking this user\'s warnings.',
-					ephemeral: true,
-				});
+				const content = 'There was an error checking this user\'s warnings.';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jclearwarnings')
@@ -430,61 +518,99 @@ module.exports = [
 				option.setName('silent')
 					.setDescription('Is this action silent?'),
 			),
-		async execute(interaction) {
-			// Init
-			const { options, guild } = interaction;
-			const targetMember = options.getUser('user');
-			const silent = options.getBoolean('silent');
+		async execute(interactionOrMessage, args) {
+			// Check if slash or not
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
+
+			// Declare vars
+			let target, silent, guild, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+
+				target = interaction.options.getUser('user');
+				silent = interaction.options.getBoolean('silent') ?? false;
+			} else {
+				// Text command parsing
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
+
+				// Check if they're using it right
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,jclearwarnings <user> || <user_Id>`');
+				}
+
+				// Parse args
+				const userMention = args[0];
+				silent = false;
+
+				// Extract
+				const userMatch = userMention.match(/^<@!?(\d+)>$/) || userMention.match(/^(\d+)$/);
+				if (!userMatch) {
+					return await message.reply('Please provide a valid user or user_Id.');
+				}
+
+				try {
+					target = await message.client.users.fetch(userMatch[1]);
+				} catch (error) {
+					return await message.reply('Could not find that user.');
+				}
+			}
 
 			// Permission Check
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'You do not have permissions to clear warnings nyaaaa~',
-					ephemeral: true,
-				});
+			if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+				const content = 'You do not have permissions to clear warnings nyaaaa~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			try {
 				// Get warnings
-				const userWarnings = getUserWarnings(targetMember.id, guild.id);
+				const userWarnings = getUserWarnings(target.id, guild.id);
 
 				if (userWarnings.length === 0) {
-					return await interaction.reply({
-						content: `${targetMember.username} does not have any warnings to remove!`,
-						ephemeral: true,
-					});
+					const content = `${target.username} does not have any warnings to remove!`;
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
 				}
 
 				// Clear the warnings now
-				const clearCount = clearWarnings(targetMember.id, guild.id);
+				const clearCount = clearWarnings(target.id, guild.id);
 
 				const clearEmbed = new EmbedBuilder()
 					.setColor(0x00ff00)
 					.setTitle('✅ Warnings Cleared!')
 					.addFields (
-						{ name: 'User', value: `${targetMember.username} (${targetMember.displayName})`, inline: true },
-						{ name: 'Cleared By', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+						{ name: 'User', value: `${target.username} (${target.displayName})`, inline: true },
+						{ name: 'Cleared By', value: `${user.username} (${user.displayName})`, inline: true },
 						{ name: 'Warnings Cleared', value: `${clearCount}`, inline: true },
 					)
-					.setThumbnail(targetMember.displayAvatarURL({ dynamic: true }))
+					.setThumbnail(target.displayAvatarURL({ dynamic: true }))
 					.setTimestamp()
-					.setFooter({ text: `User ID: ${targetMember.id}` });
+					.setFooter({ text: `User ID: ${target.id}` });
 
 				// Reply
-				await interaction.reply({
-					embeds: [clearEmbed],
-					ephemeral: silent,
-				});
+				return isSlashCommand
+					? await interactionOrMessage.reply({ embeds: [clearEmbed], ephemeral: silent })
+					: await interactionOrMessage.reply({ embeds: [clearEmbed] });
 			} catch (error) {
 				console.error('There was an error trying to clear a users warnings:', error);
-				await interaction.reply({
-					content: 'Error removing users warning',
-					ephemeral: true,
-				});
+				const content = 'Error removing users warning';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('jremovewarn')
@@ -499,28 +625,55 @@ module.exports = [
 				option.setName('silent')
 					.setDescription('Is this action silent?'),
 			),
-		async execute(interaction) {
-			const { options, guild } = interaction;
-			const warningId = options.getString('warn_id');
-			const silent = options.getBoolean('silent') ?? false;
+		async execute(interactionOrMessage, args) {
+			// Check if slash or text
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'You do not have permission to remove warnings nya~',
-					ephemeral: true,
-				});
+			// Declare vars
+			let warnId, silent, guild, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+
+				warnId = interaction.options.getString('warn_id');
+				silent = interaction.options.getBoolean('silent') ?? false;
+			} else {
+				// Text command parsing
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
+
+				// Check if they're using it right
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,jremovewarn <warn_Id>`');
+				}
+
+				// Parse args
+				warnId = args[0];
+				silent = false;
+			}
+
+			if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+				const content = 'You do not have permission to remove warnings nya~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			try {
 				// Remove the warning
-				const removedWarning = removeWarning(warningId, guild.id);
+				const removedWarning = removeWarning(warnId, guild.id);
 
 				// Check if the warning id exists
 				if (!removedWarning) {
-					return await interaction.reply({
-						content: 'Warning not found, nya is angry, NYAAAAAAAA!',
-						ephemeral: true,
-					});
+					const content = 'Warning not found, nya is angry, NYAAAAAAAA!';
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
 				}
 
 				// Grab the user
@@ -538,8 +691,8 @@ module.exports = [
 					.setTitle('✅ Warning Removed!')
 					.addFields(
 						{ name: 'User', value: `${targetUsername} (${targetDisplayName})`, inline: true },
-						{ name: 'Removed by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
-						{ name: 'Warning ID', value: `\`${warningId}\``, inline: true },
+						{ name: 'Removed by', value: `${user.username} (${user.displayName})`, inline: true },
+						{ name: 'Warning ID', value: `\`${warnId}\``, inline: true },
 						{ name: 'Original Reason', value: removedWarning.reason, inline: false },
 						{ name: 'Originally Warned by', value: moderatorName, inline: true },
 						{ name: 'Original Date', value: new Date(removedWarning.timestamp).toLocaleDateString(), inline: true },
@@ -549,16 +702,15 @@ module.exports = [
 					.setFooter({ text: `User ID: ${removedWarning.user_id}` });
 
 				// Reply
-				await interaction.reply({
-					embeds: [removeEmbed],
-					ephemeral: silent,
-				});
+				return isSlashCommand
+					? await interactionOrMessage.reply({ embeds: [removeEmbed], ephemeral: silent })
+					: await interactionOrMessage.reply({ embeds: [removeEmbed] });
 			} catch (error) {
 				console.error('There was an error trying to remove a users warning:', error);
-				await interaction.reply({
-					content: 'There was an issue removing the users warning.',
-					ephemeral: true,
-				});
+				const content = 'There was an issue removing the users warning.';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
