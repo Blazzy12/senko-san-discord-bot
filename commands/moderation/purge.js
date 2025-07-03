@@ -91,7 +91,7 @@ module.exports = {
 			}
 
 			// Fetch the message amount and add 1 if text command
-			const fetchLimit = isSlashCommand ? amount : amount + 1;
+			const fetchLimit = isSlashCommand ? amount : amount + 2;
 			const messages = await channel.messages.fetch({ limit: fetchLimit });
 
 			// Checking there is messages
