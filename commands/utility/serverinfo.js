@@ -6,15 +6,33 @@ const CACHE_DURATION = 5 * 60 * 1000;
 
 module.exports = {
 	category: 'utility',
+	textEnabled: true,
 	data: new SlashCommandBuilder()
 		.setName('serverinfo')
 		.setDescription('Fetches and posts the server information.'),
-	async execute(interaction) {
-		try {
-			// Defer
-			await interaction.deferReply();
+	async execute(interactionOrMessage) {
+		// Check if slash or text
+		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-			const { guild } = interaction;
+		// Declare vars
+		let guild, user, interaction;
+
+		if (isSlashCommand) {
+			interaction = interactionOrMessage;
+			guild = interaction.guild;
+			user = interaction.user;
+		} else {
+			// Text command
+			const message = interactionOrMessage;
+			guild = message.guild;
+			user = message.author;
+		}
+
+		try {
+			// Defer for slash commands
+			if (isSlashCommand) {
+				await interactionOrMessage.deferReply();
+			}
 
 			// Grab statistics
 			const owner = await guild.fetchOwner();
@@ -63,7 +81,7 @@ module.exports = {
 
 					console.log(`Got cached member count for ${guild.name}`);
 				} catch (error) {
-					console.log(`Failed fetching member count for ${guild.name}, use falback`);
+					console.log(`Failed fetching member count for ${guild.name}, use fallback`);
 
 					// Fallback
 					if (cached) {
@@ -107,7 +125,7 @@ module.exports = {
 					{ name: '✨ Animated Icon', value: animatedIcon, inline: true },
 					{ name: '🖼️ Server Banner', value: bannerOn, inline: true },
 				)
-				.setFooter({ text: `Requested by ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() })
+				.setFooter({ text: `Requested by ${user.username}`, iconURL: user.displayAvatarURL() })
 				.setTimestamp();
 
 			// Checking for banner :D
@@ -116,23 +134,35 @@ module.exports = {
 			}
 
 			// Reply
-			await interaction.editReply({
-				embeds: [serverInfoEmbed],
-			});
-		} catch (error) {
-			console.error('Eror with serverinfo command:', error);
-
-			// Check
-			if (interaction.replied || interaction.deferred) {
-				await interaction.followUp({
-					content: 'Error fetching server information',
-					ephemeral: true,
+			if (isSlashCommand) {
+				await interactionOrMessage.editReply({
+					embeds: [serverInfoEmbed],
 				});
 			} else {
-				await interaction.reply({
-					content: 'Error fetching server information',
-					ephemeral: true,
+				await interactionOrMessage.reply({
+					embeds: [serverInfoEmbed],
 				});
+			}
+		} catch (error) {
+			console.error('Error with serverinfo command:', error);
+
+			const content = 'Error fetching server information';
+
+			// Check and respond appropriately
+			if (isSlashCommand) {
+				if (interactionOrMessage.replied || interactionOrMessage.deferred) {
+					await interactionOrMessage.followUp({
+						content,
+						ephemeral: true,
+					});
+				} else {
+					await interactionOrMessage.reply({
+						content,
+						ephemeral: true,
+					});
+				}
+			} else {
+				await interactionOrMessage.reply(content);
 			}
 		}
 	},
