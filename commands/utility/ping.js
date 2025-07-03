@@ -10,11 +10,18 @@ module.exports = {
 		// Check if slash or text
 		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-		const client = interactionOrMessage.client;
+		let client;
+		if (isSlashCommand) {
+			client = interactionOrMessage.client;
+		} else {
+			client = interactionOrMessage.client;
+		}
 
 		// Bot latency
 		const botLatency = client.ws.ping;
-		const responseMessage = `Pong! 🏓 Latency: ${botLatency}ms`;
+		const latencyText = botLatency === -1 ? 'Connecting...' : `${botLatency}ms`;
+		const responseMessage = `Pong! 🏓 Latency: ${latencyText}`;
+
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content: responseMessage })
 			: await interactionOrMessage.reply(responseMessage);
