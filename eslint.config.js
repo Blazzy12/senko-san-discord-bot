@@ -30,6 +30,7 @@ module.exports = [
 				// Custom globals
 				warning: 'readonly',
 				userWarnings: 'readonly',
+				setTimeout: 'readonly',
 			},
 		},
 		rules: {

@@ -286,7 +286,7 @@ module.exports = [
 			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 			// Declare vars
-			let target, reason, silent, guild, member, user, interaction;
+			let target, silent, guild, member, user, interaction;
 
 			if (isSlashCommand) {
 				interaction = interactionOrMessage;
@@ -522,6 +522,7 @@ module.exports = [
 		},
 	},
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('clearwarnings')
@@ -536,45 +537,83 @@ module.exports = [
 				option.setName('silent')
 					.setDescription('Is this action silent?'),
 			),
-		async execute(interaction) {
-			// Init
-			const { options, guild } = interaction;
-			const targetMember = options.getUser('user');
-			const silent = options.getBoolean('silent');
+		async execute(interactionOrMessage, args) {
+			// Check if slash or not
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
+
+			// Declare vars
+			let target, silent, guild, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+
+				target = interaction.options.getUser('user');
+				silent = interaction.options.getBoolean('silent') ?? false;
+			} else {
+				// Text command parsing
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
+
+				// Check if they're using it right
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,clearwarnings <user> || <user_Id>`');
+				}
+
+				// Parse args
+				const userMention = args[0];
+				silent = false;
+
+				// Extract
+				const userMatch = userMention.match(/^<@!?(\d+)>$/) || userMention.match(/^(\d+)$/);
+				if (!userMatch) {
+					return await message.reply('Please provide a valid user or user_Id.');
+				}
+
+				try {
+					target = await message.client.users.fetch(userMatch[1]);
+				} catch (error) {
+					return await message.reply('Could not find that user.');
+				}
+			}
 
 			// Permission Check
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'You do not have permissions to clear warnings nyaaaa~',
-					ephemeral: true,
-				});
+			if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+				const content = 'You do not have permissions to clear warnings nyaaaa~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			try {
 				// Get warnings
-				const userWarnings = getUserWarnings(targetMember.id, guild.id);
+				const userWarnings = getUserWarnings(target.id, guild.id);
 
 				if (userWarnings.length === 0) {
-					return await interaction.reply({
-						content: `${targetMember.username} does not have any warnings to remove!`,
-						ephemeral: true,
-					});
+					const content = `${target.username} does not have any warnings to remove!`;
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
 				}
 
 				// Clear the warnings now
-				const clearCount = clearWarnings(targetMember.id, guild.id);
+				const clearCount = clearWarnings(target.id, guild.id);
 
 				const clearEmbed = new EmbedBuilder()
 					.setColor(0x00ff00)
 					.setTitle('✅ Warnings Cleared!')
 					.addFields (
-						{ name: 'User', value: `${targetMember.username} (${targetMember.displayName})`, inline: true },
-						{ name: 'Cleared By', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
+						{ name: 'User', value: `${target.username} (${target.displayName})`, inline: true },
+						{ name: 'Cleared By', value: `${user.username} (${user.displayName})`, inline: true },
 						{ name: 'Warnings Cleared', value: `${clearCount}`, inline: true },
 					)
-					.setThumbnail(targetMember.displayAvatarURL({ dynamic: true }))
+					.setThumbnail(target.displayAvatarURL({ dynamic: true }))
 					.setTimestamp()
-					.setFooter({ text: `User ID: ${targetMember.id}` });
+					.setFooter({ text: `User ID: ${target.id}` });
 
 				// Log to channel
 				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
@@ -589,20 +628,20 @@ module.exports = [
 				}
 
 				// Reply
-				await interaction.reply({
-					embeds: [clearEmbed],
-					ephemeral: silent,
-				});
+				return isSlashCommand
+					? await interactionOrMessage.reply({ embeds: [clearEmbed], ephemeral: silent })
+					: await interactionOrMessage.reply({ embeds: [clearEmbed] });
 			} catch (error) {
 				console.error('There was an error trying to clear a users warnings:', error);
-				await interaction.reply({
-					content: 'Error removing users warning',
-					ephemeral: true,
-				});
+				const content = 'Error removing users warning';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
 	{
+		textEnabled: true,
 		category: 'moderation',
 		data: new SlashCommandBuilder()
 			.setName('removewarn')
@@ -617,28 +656,55 @@ module.exports = [
 				option.setName('silent')
 					.setDescription('Is this action silent?'),
 			),
-		async execute(interaction) {
-			const { options, guild } = interaction;
-			const warningId = options.getString('warn_id');
-			const silent = options.getBoolean('silent') ?? false;
+		async execute(interactionOrMessage, args) {
+			// Check if slash or text
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-			if (!interaction.member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
-				return await interaction.reply({
-					content: 'You do not have permission to remove warnings nya~',
-					ephemeral: true,
-				});
+			// Declare vars
+			let warnId, silent, guild, member, user, interaction;
+
+			if (isSlashCommand) {
+				interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+
+				warnId = interaction.options.getString('warn_id');
+				silent = interaction.options.getBoolean('silent') ?? false;
+			} else {
+				// Text command parsing
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
+
+
+				// Check if they're using it right
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,removewarn <warn_Id>`');
+				}
+
+				// Parse args
+				warnId = args[0];
+			}
+
+			if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) {
+				const content = 'You do not have permission to remove warnings nya~';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 
 			try {
 				// Remove the warning
-				const removedWarning = removeWarning(warningId, guild.id);
+				const removedWarning = removeWarning(warnId, guild.id);
 
 				// Check if the warning id exists
 				if (!removedWarning) {
-					return await interaction.reply({
-						content: 'Warning not found, nya is angry, NYAAAAAAAA!',
-						ephemeral: true,
-					});
+					const content = 'Warning not found, nya is angry, NYAAAAAAAA!';
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
 				}
 
 				// Grab the user
@@ -656,8 +722,8 @@ module.exports = [
 					.setTitle('✅ Warning Removed!')
 					.addFields(
 						{ name: 'User', value: `${targetUsername} (${targetDisplayName})`, inline: true },
-						{ name: 'Removed by', value: `${interaction.user.username} (${interaction.user.displayName})`, inline: true },
-						{ name: 'Warning ID', value: `\`${warningId}\``, inline: true },
+						{ name: 'Removed by', value: `${user.username} (${user.displayName})`, inline: true },
+						{ name: 'Warning ID', value: `\`${warnId}\``, inline: true },
 						{ name: 'Original Reason', value: removedWarning.reason, inline: false },
 						{ name: 'Originally Warned by', value: moderatorName, inline: true },
 						{ name: 'Original Date', value: new Date(removedWarning.timestamp).toLocaleDateString(), inline: true },
@@ -679,16 +745,15 @@ module.exports = [
 				}
 
 				// Reply
-				await interaction.reply({
-					embeds: [removeEmbed],
-					ephemeral: silent,
-				});
+				return isSlashCommand
+					? await interactionOrMessage.reply({ embeds: [removeEmbed], ephemeral: silent })
+					: await interactionOrMessage.reply({ embeds: [removeEmbed] });
 			} catch (error) {
 				console.error('There was an error trying to remove a users warning:', error);
-				await interaction.reply({
-					content: 'There was an issue removing the users warning.',
-					ephemeral: true,
-				});
+				const content = 'There was an issue removing the users warning.';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
 			}
 		},
 	},
