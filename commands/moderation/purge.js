@@ -84,15 +84,34 @@ module.exports = {
 			// Get channel
 			const channel = isSlashCommand ? interactionOrMessage.channel : interactionOrMessage.channel;
 
-			// Fetch the message amount
-			const messages = await channel.messages.fetch({ limit: amount });
+			// For text commands, send success message BEFORE deleting to avoid referencing deleted message
+			let successMessage = null;
+			if (!isSlashCommand) {
+				successMessage = await interactionOrMessage.reply(`Nya~ Senko is purging **${amount}** message(s)...`);
+			}
+
+			// Fetch the message amount and add 1 if text command
+			const fetchLimit = isSlashCommand ? amount : amount + 1;
+			const messages = await channel.messages.fetch({ limit: fetchLimit });
 
 			// Checking there is messages
 			if (messages.size === 0) {
 				const content = 'Silly billy nya~ there is not any messages to delete!';
-				return isSlashCommand
-					? await interactionOrMessage.editReply({ content, ephemeral: true })
-					: await interactionOrMessage.reply(content);
+				if (isSlashCommand) {
+					return await interactionOrMessage.editReply({ content, ephemeral: true });
+				} else {
+					if (successMessage) {
+						try {
+							await successMessage.edit(content);
+						} catch (editError) {
+							// If edit fails, send new message
+							await channel.send(content);
+						}
+					} else {
+						await channel.send(content);
+					}
+					return;
+				}
 			}
 
 			// Discord has a limitation of 14 days to bulk delete messages
@@ -103,9 +122,21 @@ module.exports = {
 			// Checking now for zerooo
 			if (filterMessages.size === 0) {
 				const content = 'Senko says these messages are too old.';
-				return isSlashCommand
-					? await interactionOrMessage.editReply({ content, ephemeral: true })
-					: await interactionOrMessage.reply(content);
+				if (isSlashCommand) {
+					return await interactionOrMessage.editReply({ content, ephemeral: true });
+				} else {
+					if (successMessage) {
+						try {
+							await successMessage.edit(content);
+						} catch (editError) {
+							// If edit fails, send new message
+							await channel.send(content);
+						}
+					} else {
+						await channel.send(content);
+					}
+					return;
+				}
 			}
 
 			// Collect the messages before deletion
@@ -160,18 +191,48 @@ module.exports = {
 					}
 				}, 5000);
 			} else {
-				const reply = await interactionOrMessage.reply(sContent);
-
-				// Delete message after 5 seconds
-				setTimeout(async () => {
+				// For text commands, edit the success message or send a new one
+				if (successMessage) {
 					try {
-						await reply.delete();
-					} catch (error) {
-						// Ignore if already deleted
+						await successMessage.edit(sContent);
+
+						// Delete message after 5 seconds
+						setTimeout(async () => {
+							try {
+								await successMessage.delete();
+							} catch (error) {
+								// Ignore if already deleted
+							}
+						}, 5000);
+					} catch (editError) {
+						// If editing fails (message was deleted), send new message
+						const newMessage = await channel.send(sContent);
+
+						// Delete message after 5 seconds
+						setTimeout(async () => {
+							try {
+								await newMessage.delete();
+							} catch (error) {
+								// Ignore if already deleted
+							}
+						}, 5000);
 					}
-				}, 5000);
+				} else {
+					// Fallback: send new message
+					const newMessage = await channel.send(sContent);
+
+					// Delete message after 5 seconds
+					setTimeout(async () => {
+						try {
+							await newMessage.delete();
+						} catch (error) {
+							// Ignore if already deleted
+						}
+					}, 5000);
+				}
 			}
 
+			// Send to moderation log
 			const purgeEmbed = new EmbedBuilder()
 				.setTitle('✏️ Message(s) Purged')
 				.setColor(0xFFB6C1)
@@ -216,7 +277,12 @@ module.exports = {
 					return await interactionOrMessage.reply({ content, ephemeral: true });
 				}
 			} else {
-				return await interactionOrMessage.reply(content);
+				// For text commands, send error message to channel directly
+				try {
+					await interactionOrMessage.channel.send(content);
+				} catch (sendError) {
+					console.error('Failed to send error message:', sendError);
+				}
 			}
 		}
 	},
