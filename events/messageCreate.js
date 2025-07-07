@@ -11,10 +11,22 @@ module.exports = {
 
 		// Parse command and arguments
 		const args = message.content.slice(prefix.length).trim().split(/ +/);
-		const commandName = args.shift().toLowerCase();
+		let commandName = args.shift().toLowerCase();
 
 		// Get command from text commands collection
-		const command = message.client.textCommands.get(commandName);
+		let command = message.client.textCommands.get(commandName);
+
+		// If command not found, check if it's an alias
+		if (!command) {
+			// Look through all commands to find one with this alias
+			for (const [name, cmd] of message.client.textCommands) {
+				if (cmd.aliases && cmd.aliases.includes(commandName)) {
+					command = cmd;
+					commandName = name; // Use the main command name for cooldowns
+					break;
+				}
+			}
+		}
 
 		if (!command) {
 			// Optionally handle unknown commands silently or with a message
@@ -36,7 +48,7 @@ module.exports = {
 			const expirationTime = timestamps.get(message.author.id) + cooldownAmount;
 			if (now < expirationTime) {
 				const expiredTimestamp = Math.round(expirationTime / 1_000);
-				return message.reply(`Please wait, you are on a cooldown for \`${command.name}\`. You can use it again <t:${expiredTimestamp}:R>.`);
+				return message.reply(`Please wait, you are on a cooldown for \`${command.data.name}\`. You can use it again <t:${expiredTimestamp}:R>.`);
 			}
 		}
 
