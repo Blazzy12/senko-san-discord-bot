@@ -27,7 +27,7 @@ module.exports = [
 	{
 		category: 'moderation',
 		textEnabled: true,
-		aliases: ['sybau'],
+		aliases: ['sybau', 'm'],
 		data: new SlashCommandBuilder()
 			.setName('mute')
 			.setDescription('Mute a user for a specific amount of time')
@@ -213,6 +213,7 @@ module.exports = [
 	{
 		category: 'moderation',
 		textEnabled: true,
+		aliases: ['um'],
 		data: new SlashCommandBuilder()
 			.setName('unmute')
 			.setDescription('Unmutes a user.')
