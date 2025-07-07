@@ -165,7 +165,7 @@ module.exports = [
 						: await interactionOrMessage.reply(content);
 				}
 
-				const finalReason = `${target.username} Muted by ${user.username} | ${duration} | ${reason}`;
+				const finalReason = `**${target.username}** Muted by **${user.username}** | Duration: **${duration}** | Reason: **${reason}**`;
 
 				// Mute the user
 				await targetMember.timeout(durationMs, finalReason);
@@ -327,7 +327,7 @@ module.exports = [
 						: await interactionOrMessage.reply(content);
 				}
 
-				const finalReason = `${target.username} Unmuted by ${user.username} | ${reason}`;
+				const finalReason = `**${target.username}** Unmuted by **${user.username}** | Reason: **${reason}**`;
 
 				// Unmute the user
 				await targetMember.timeout(null, finalReason);
