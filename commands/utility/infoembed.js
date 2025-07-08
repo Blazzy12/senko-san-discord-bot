@@ -7,10 +7,17 @@ module.exports = {
 		.setName('rulesembed')
 		.setDescription('awd'),
 	async execute(interaction) {
-		const serverInfoEmbed = new EmbedBuilder()
+		const serverInfoEmbed1 = new EmbedBuilder()
 			.setColor(0xFFCCCB)
 			.setImage('https://i.imgur.com/Lp05CQ1.gif');
+		const serverInfoEmbed2 = new EmbedBuilder()
+			.setColor(0xFFCCCB)
+			.setTitle('📖 **__INTRODUCTION OF RULES__** 📖')
+			.setDescription(
+				'<:9109869264907838241:9109869264907838241> # Discord Rules:',
+			);
 
-		await interaction.reply({ embeds: [serverInfoEmbed] });
+		await interaction.reply({ embeds: [serverInfoEmbed1] });
+		await interaction.reply({ embeds: [serverInfoEmbed2] });
 	},
 };
