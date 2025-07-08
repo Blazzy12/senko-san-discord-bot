@@ -1,10 +1,11 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 
 module.exports = {
 	category: 'utility',
 	data: new SlashCommandBuilder()
 		.setName('rulesembed')
-		.setDescription('awd'),
+		.setDescription('awd')
+		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 	async execute(interaction) {
 		const serverInfoEmbed1 = new EmbedBuilder()
 			.setColor(0xFFCCCB)
