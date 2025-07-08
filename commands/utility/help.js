@@ -67,7 +67,7 @@ module.exports = {
 				'## Senko-San Commands\n' +
 				'*Just click the selection menu at the bottom silly billy*\n' +
 				'## Features\n' +
-				'`Warning System`, `Moderation`, `Utility`, `Fun`, `Info`\n',
+				'`Warning System`, `Moderation`, `Utility`, `Fun`, `Configuration`, `Info`\n',
 			)
 			.setFooter({ text: 'Made with love <3 by _blazzy' });
 
