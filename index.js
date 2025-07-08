@@ -73,5 +73,17 @@ for (const file of eventFiles) {
 	}
 }
 
+// Load select menus
+const selectMenusPath = path.join(__dirname, 'selectMenus');
+const selectMenuFiles = fs.readdirSync(selectMenusPath).filter(file => file.endsWith('.js'));
+
+for (const file of selectMenuFiles) {
+	const filePath = path.join(selectMenusPath, file);
+	const selectMenu = require(filePath);
+	if ('data' in selectMenu && 'execute' in selectMenu) {
+    	client.selectMenus.set(selectMenu.data.name, selectMenu);
+	}
+}
+
 // Log in to Discord with your client's token
 client.login(token);
