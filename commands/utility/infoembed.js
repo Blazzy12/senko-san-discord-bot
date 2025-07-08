@@ -2,7 +2,6 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
 	category: 'utility',
-	textEnabled: true,
 	data: new SlashCommandBuilder()
 		.setName('rulesembed')
 		.setDescription('awd'),
@@ -14,8 +13,10 @@ module.exports = {
 			.setColor(0xFFCCCB)
 			.setTitle('📖 **__INTRODUCTION OF RULES__** 📖')
 			.setDescription(
-				'# <a:arrow:1364978340120887307> Discord Rules:',
-			);
+				'## <a:arrow:1364978340120887307> Discord Rules:\n' +
+				'- This server follows Discord\'s [TOS](https://discord.com/terms). Any violation of these terms will be taken seriously and will result in a penalty. It\'s our task to make sure the server is a safe place for our members to hang out.',
+			)
+			.setFooter('https://i.imgur.com/IGyxWy8.gif');
 
 		// Send to the channel where the interaction was triggered
 		await interaction.channel.send({ embeds: [serverInfoEmbed1] });
