@@ -90,7 +90,7 @@ module.exports = {
 				successMessage = await interactionOrMessage.reply(`Nya~ Senko is purging **${amount}** message(s)...`);
 			}
 
-			// Fetch the message amount and add 1 if text command
+			// Fetch messages - for text commands, we need to fetch extra to account for the command message and bot response
 			const fetchLimit = isSlashCommand ? amount : amount + 2;
 			const messages = await channel.messages.fetch({ limit: fetchLimit });
 
@@ -115,13 +115,27 @@ module.exports = {
 			}
 
 			// Discord has a limitation of 14 days to bulk delete messages
-			const filterMessages = messages.filter(msg =>
+			let filterMessages = messages.filter(msg =>
 				Date.now() - msg.createdTimestamp < 14 * 24 * 60 * 60 * 1000,
 			);
 
-			// Checking now for zerooo
+			// For text commands, exclude the command message and bot response, then limit to requested amount
+			if (!isSlashCommand) {
+				const messagesArray = Array.from(filterMessages.values());
+				// Sort by timestamp (newest first, which is Discord's default)
+				messagesArray.sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+
+				// Skip the first 2 messages (bot response and user command) and take only the requested amount
+				const messagesToDelete = messagesArray.slice(2, 2 + amount);
+
+				// Convert back to Collection
+				filterMessages = new Map();
+				messagesToDelete.forEach(msg => filterMessages.set(msg.id, msg));
+			}
+
+			// Checking now for zero
 			if (filterMessages.size === 0) {
-				const content = 'Senko says these messages are too old.';
+				const content = 'Senko says these messages are too old or there are no messages to delete.';
 				if (isSlashCommand) {
 					return await interactionOrMessage.editReply({ content, ephemeral: true });
 				} else {
