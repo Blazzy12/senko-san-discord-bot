@@ -23,7 +23,7 @@ module.exports = {
 			.setCustomId('help')
 			.setPlaceholder('Select your section')
 			.setMinValues(1)
-			.setMaxValues(5)
+			.setMaxValues(1)
 			.addOptions([
 				new StringSelectMenuOptionBuilder()
 					.setLabel('Warning System')

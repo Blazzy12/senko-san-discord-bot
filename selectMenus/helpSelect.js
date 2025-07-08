@@ -6,7 +6,7 @@ module.exports = {
 	},
 	cooldown: 3,
 	async execute(interaction) {
-		const selectedValues = interaction.values;
+		const selectedValue = interaction.values[0];
 
 		const helpMap = {
 			warningsystem: {
@@ -77,43 +77,36 @@ module.exports = {
 					'',
 					'Pop me a message if you have suggestions!',
 				],
-			}
+			},
 		};
 
-		// Create embeds for each selected category
-		const embeds = [];
+		// Get the selected category
+		const category = helpMap[selectedValue];
 
-		for (const value of selectedValues) {
-			const category = helpMap[value];
-			if (category) {
-				const embed = new EmbedBuilder()
-					.setColor(0xFFB6C1)
-					.setTitle(category.title)
-					.setDescription(category.description)
-					.addFields({
-						name: 'Commands',
-						value: category.commands.join('\n'),
-						inline: false,
-					})
-					.setFooter({ text: 'Made with love <3 by _blazzy' })
-					.setTimestamp();
-
-				embeds.push(embed);
-			}
-		}
-
-		// If no valid selections, show error
-		if (embeds.length === 0) {
+		if (!category) {
 			const errorEmbed = new EmbedBuilder()
 				.setColor(0xFF0000)
 				.setTitle('❌ Error')
-				.setDescription('No valid categories selected!')
+				.setDescription('Invalid category selected!')
 				.setFooter({ text: 'Made with love <3 by _blazzy' });
 
 			return await interaction.reply({ embeds: [errorEmbed], ephemeral: true });
 		}
 
-		// Send the embeds (Discord allows up to 10 embeds per message)
-		await interaction.reply({ embeds: embeds, ephemeral: true });
+		// Create embed for the selected category
+		const embed = new EmbedBuilder()
+			.setColor(0xFFB6C1)
+			.setTitle(category.title)
+			.setDescription(category.description)
+			.addFields({
+				name: 'Commands',
+				value: category.commands.join('\n'),
+				inline: false
+			})
+			.setFooter({ text: 'Made with love <3 by _blazzy' })
+			.setTimestamp();
+
+		// Send the embed
+		await interaction.reply({ embeds: [embed], ephemeral: true });
 	},
 };
