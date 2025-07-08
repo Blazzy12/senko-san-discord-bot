@@ -32,11 +32,11 @@ module.exports = {
 				'## <a:arrow:1364978340120887307> Rule No. 5\n' +
 				'- Kindly respect personal space. This is an online platform, so you may not force irl chats here if others are not fine with it.\n' +
 				'## <a:arrow:1364978340120887307> Rule No. 6\n' +
-				'- If you leave and rejoin the server a lot your custom role\'s deletion is at our discretion.\n' +
+				'- If you leave and rejoin the server a lot your custom role\'s deletion is at our discretion.\n\n' +
 				'## <a:point:1364978349176524810> Note <a:point:1364978349176524810>\n' +
 				'- I. If rules are broken, you could be charged with a warning, timeout, kick, or ban; depending on your past record and the rule(s) you broke.\n' +
-				'- II. We follow a hiearchy system here. You get perks according to your role.\n' +
-				'Checkout <#1354552643045031988> to know more about it.\n',
+				'- II. We follow a hiearchy system here. You get perks according to your role.\n\n' +
+				'Checkout <#1354552643045031988> to know more about it.',
 			)
 			.setImage('https://i.imgur.com/IGyxWy8.gif');
 
