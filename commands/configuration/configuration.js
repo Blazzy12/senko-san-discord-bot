@@ -135,6 +135,7 @@ module.exports = [
 								{ name: 'Prefix', value: 'Prefix' },
 								{ name: 'Warning Log Channel', value: 'warn_log_channel_id' },
 								{ name: 'Kick Log Channel', value: 'kick_log_channel_id' },
+								{ name: 'Ban Log Channel', value: 'ban_log_channel_id' },
 								{ name: 'Mute Log Channel', value: 'mute_log_channel_id' },
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
