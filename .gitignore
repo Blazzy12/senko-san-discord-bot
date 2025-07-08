@@ -1,5 +1,6 @@
 node_modules/
 node/
+package-lock.json
 config.json
 important.txt
 commands/moderation/warnings.db

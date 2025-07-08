@@ -1,35 +1,116 @@
-# discord-bot-blazzy
+# Senko San Discord Bot
 
-install https://nodejs.org/ (LTS)
+A Discord bot built with Node.js and Discord.js.
 
-clone or download project
+## 📋 Prerequisites
 
-unzip
+- [Node.js](https://nodejs.org/) (LTS version recommended)
+- A Discord application and bot token
 
-navagate to folder and run command below
+## 🚀 Installation
 
-run 'npm install'
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd senko-san-discord-bot
+   ```
 
-remove .template from 'config.json.template'
+2. **Install dependencies**
+   ```bash
+   npm install
+   npm install better-sqlite3
+   ```
 
-replace with respective information
+3. **Configure the bot**
+   - Rename `config.json.template` to `config.json`
+   - Fill in your bot configuration:
+    ```json
+    {
+        "token": "Bot-Token",
+        "clientId": "Application-Id",
+        "guildId": "Guild-Id"
+    }
+    ```
 
-Bot-Token
-Application-Id
-Guild-Id
+## ⚙️ Setup
 
-in order to deploy commands run 'node .\deploy-commands.js' it is important that you DO NOT run 'node .\global-deploy-commands.js'
+### Deploy Commands
+```bash
+node ./deploy-commands.js
+```
 
-in order to launch the bot run 'node .' or 'node .\index.js'
+### Launch the Bot
+```bash
+node .
+# or
+node ./index.js
+```
 
---------------------
-sqlite3 (not optional)
+## 🛠️ Database
 
-npm install better-sqlite3
+This bot uses SQLite3 for data storage. The `better-sqlite3` package is required and will be installed automatically with the dependencies.
 
---------------------
-optional linter (is recommended)
+## 📝 Development
 
-install https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint for vscode
+### Linting (Recommended)
 
-if linter has issues right away navigate to your project folder and run 'npm install --save-dev eslint @eslint/js'
+For better code quality, install the ESLint extension:
+- [ESLint for VS Code](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint)
+
+If you encounter linting issues, install the required ESLint packages:
+```bash
+npm install --save-dev eslint @eslint/js
+```
+
+## 📁 Project Structure
+
+```
+📦 senko-san-discord-bot
+├─ LICENSE
+├─ README.md
+├─ commands
+│  ├─ configuration
+│  │  └─ configuration.js
+│  ├─ moderation
+│  │  ├─ ban.js
+│  │  ├─ jwarnsystem.js
+│  │  ├─ kick.js
+│  │  ├─ lockdown.js
+│  │  ├─ mute.js
+│  │  ├─ purge.js
+│  │  └─ warnsystem.js
+│  └─ utility
+│     ├─ mirage.js
+│     ├─ ping.js
+│     ├─ rulesembed.js
+│     └─ serverinfo.js
+├─ config.json.template
+├─ deploy-commands.js
+├─ eslint.config.js
+├─ events
+│  ├─ interactionCreate.js
+│  ├─ messageCreate.js
+│  └─ ready.js
+├─ index.js
+└─ package.json
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the GPL-2.0 License - see the LICENSE file for details.
+
+## 🆘 Support
+
+If you encounter any issues or have questions, please open an issue on GitHub.
+
+---
+
+Made with ❤️ for the Discord community
