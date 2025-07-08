@@ -1,4 +1,5 @@
 const { EmbedBuilder } = require('discord.js');
+const { getGuildConfig } = require('../commands/configuration/configuration.js');
 
 module.exports = {
 	data: {
@@ -8,22 +9,26 @@ module.exports = {
 	async execute(interaction) {
 		const selectedValue = interaction.values[0];
 
+		// Get guild config to access the prefix
+		const guildConfig = getGuildConfig(interaction.guild.id);
+		const prefix = guildConfig.prefix;
+
 		const helpMap = {
 			warningsystem: {
 				title: '⚠️ Warning System',
 				description: 'Commands for managing user warnings',
 				commands: [
 					'**Warning System**',
-					'`,warn <user|user_Id>` [reason] - Warn a user.',
-					'`,warnings <user|user_Id>` - View user warnings',
-					'`,removewarn <warn_Id>` - Remove a warning',
-					'`,clearwarnings <user|user_Id>` - Clear all warnings for a user',
+					`\`${prefix}warn <user|user_Id>\` [reason] - Warn a user.`,
+					`\`${prefix}warnings <user|user_Id>\` - View user warnings`,
+					`\`${prefix}removewarn <warn_Id>\` - Remove a warning`,
+					`\`${prefix}clearwarnings <user|user_Id>\` - Clear all warnings for a user`,
 					' ',
 					'**Joke Warning System**',
-					'`,jwarn <user|user_Id> [reason]` - Warn a user.',
-					'`,jwarnings <user|user_Id>` - View user warnings',
-					'`,jremovewarn <warn_Id>` - Remove a warning',
-					'`,jclearwarnings <user|user_Id>` - Clear all warnings for a user',
+					`\`${prefix}jwarn <user|user_Id> [reason]\` - Warn a user.`,
+					`\`${prefix}jwarnings <user|user_Id>\` - View user warnings`,
+					`\`${prefix}jremovewarn <warn_Id>\` - Remove a warning`,
+					`\`${prefix}jclearwarnings <user|user_Id>\` - Clear all warnings for a user`,
 					'** All compatible with slash commands**',
 				],
 			},
@@ -31,13 +36,13 @@ module.exports = {
 				title: '💥 Moderation System',
 				description: 'Commands for server moderation',
 				commands: [
-					'`,ban <user|user_Id> [reason]` - Ban a user',
-					'`,kick <user|user_Id> [reason]` - Kick a user',
-					'`,mute <user|user_Id> <duration> [reason]` - Timeout a user',
-					'`,unmute <user|user_Id> [reason]` - Un-Timeout a user',
-					'`,purge <amount> [reason]` - Delete messages',
-					'`,lock` - Locks the current channel',
-					'`,unlock` - Unlocks the current channel',
+					`\`${prefix}ban <user|user_Id> [reason]\` - Ban a user`,
+					`\`${prefix}kick <user|user_Id> [reason]\` - Kick a user`,
+					`\`${prefix}mute <user|user_Id> <duration> [reason]\` - Timeout a user`,
+					`\`${prefix}unmute <user|user_Id> [reason]\` - Un-Timeout a user`,
+					`\`${prefix}purge <amount> [reason]\` - Delete messages`,
+					`\`${prefix}lock\` - Locks the current channel`,
+					`\`${prefix}unlock\` - Unlocks the current channel`,
 					'** All compatible with slash commands**',
 				],
 			},
@@ -45,10 +50,10 @@ module.exports = {
 				title: '🔧 Utility System',
 				description: 'Useful utility commands',
 				commands: [
-					'`,help` - This command',
-					'`,avatar [user|user_Id]` - Fetches the user\'s avatar',
-					'`,serverinfo` - Get server information',
-					'`,ping` - Get the bots ping',
+					`\`${prefix}help\` - This command`,
+					`\`${prefix}avatar [user|user_Id]\` - Fetches the user's avatar`,
+					`\`${prefix}serverinfo\` - Get server information`,
+					`\`${prefix}ping\` - Get the bots ping`,
 					'** All compatible with slash commands**',
 				],
 			},
@@ -56,7 +61,7 @@ module.exports = {
 				title: '🎠 Fun System',
 				description: 'Entertainment and fun commands',
 				commands: [
-					'`,mirage` - Posts lx.mirage07 favourite gif!',
+					`\`${prefix}mirage\` - Posts lx.mirage07 favourite gif!`,
 					'** All compatible with slash commands**',
 				],
 			},
@@ -64,7 +69,7 @@ module.exports = {
 				title: '⚙️ Configuration System',
 				description: 'Server configuration commands',
 				commands: [
-					'`,config <view|set|reset> [key] [value]` - Set log channel',
+					`\`${prefix}config <view|set|reset> [key] [value]\` - Set log channel`,
 					'** All compatible with slash commands**',
 				],
 			},

@@ -2,6 +2,8 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder
 const Database = require('better-sqlite3');
 const path = require('path');
 
+const { getGuildConfig } = require('../configuration/configuration.js');
+
 // We're going to initialize the sqlite3 database
 const databasePath = path.join(__dirname, 'jwarnings.db');
 const db = new Database(databasePath);
@@ -113,7 +115,7 @@ module.exports = [
 			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 			// Declare Vars
-			let target, reason, silent, guild, member, user, interaction;
+			let target, reason, silent, guild, member, user, interaction, guildConfig;
 
 			if (isSlashCommand) {
 				interaction = interactionOrMessage;
@@ -131,9 +133,13 @@ module.exports = [
 				member = message.member;
 				user = message.author;
 
+				// Get config
+				guildConfig = getGuildConfig(guild.id);
+				const prefix = guildConfig.prefix;
+
 				// Check if usage is right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jwarn <user|user_Id> [reason]`');
+					return await message.reply(`Usage: \`${prefix}jwarn <user|user_Id> [reason]\``);
 				}
 
 				// Parse args
@@ -273,7 +279,7 @@ module.exports = [
 			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 			// Declare vars
-			let target, silent, guild, member, user, interaction;
+			let target, silent, guild, member, user, interaction, guildConfig;
 
 			if (isSlashCommand) {
 				interaction = interactionOrMessage;
@@ -290,9 +296,13 @@ module.exports = [
 				member = message.member;
 				user = message.author;
 
+				// Get config
+				guildConfig = getGuildConfig(guild.id);
+				const prefix = guildConfig.prefix;
+
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jwarnings <user|user_Id>`');
+					return await message.reply(`Usage: \`${prefix}jwarnings <user|user_Id>\``);
 				}
 
 				// Parse args
@@ -523,7 +533,7 @@ module.exports = [
 			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 			// Declare vars
-			let target, silent, guild, member, user, interaction;
+			let target, silent, guild, member, user, interaction, guildConfig;
 
 			if (isSlashCommand) {
 				interaction = interactionOrMessage;
@@ -540,9 +550,13 @@ module.exports = [
 				member = message.member;
 				user = message.author;
 
+				// Get config
+				guildConfig = getGuildConfig(guild.id);
+				const prefix = guildConfig.prefix;
+
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jclearwarnings <user|user_Id>`');
+					return await message.reply(`Usage: \`${prefix}jclearwarnings <user|user_Id>\``);
 				}
 
 				// Parse args
@@ -630,7 +644,7 @@ module.exports = [
 			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 			// Declare vars
-			let warnId, silent, guild, member, user, interaction;
+			let warnId, silent, guild, member, user, interaction, guildConfig;
 
 			if (isSlashCommand) {
 				interaction = interactionOrMessage;
@@ -647,9 +661,13 @@ module.exports = [
 				member = message.member;
 				user = message.author;
 
+				// Get config
+				guildConfig = getGuildConfig(guild.id);
+				const prefix = guildConfig.prefix;
+
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jremovewarn <warn_Id>`');
+					return await message.reply(`Usage: \`${prefix}jremovewarn <warn_Id>\``);
 				}
 
 				// Parse args

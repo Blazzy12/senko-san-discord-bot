@@ -24,13 +24,15 @@ module.exports = {
 		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 		// Declare vars
-		let amount, reason, guild, member, user, interaction;
+		let amount, reason, guild, member, user, interaction, guildConfig;
 
 		if (isSlashCommand) {
 			interaction = interactionOrMessage;
 			guild = interaction.guild;
 			member = interaction.member;
 			user = interaction.user;
+
+			guildConfig = getGuildConfig(guild.id);
 
 			amount = interaction.options.getNumber('amount');
 			reason = interaction.options.getString('reason') ?? 'No reason provided';
@@ -41,9 +43,13 @@ module.exports = {
 			member = message.member;
 			user = message.author;
 
+			// Get config
+			guildConfig = getGuildConfig(guild.id);
+			const prefix = guildConfig.prefix;
+
 			// Check if they're using it right
 			if (!args || args.length < 1) {
-				return await message.reply('Usage: `,purge <amount> [reason]`');
+				return await message.reply(`Usage: \`${prefix}purge <amount> [reason]\``);
 			}
 
 			// Parse args
@@ -260,7 +266,6 @@ module.exports = {
 				.setFooter({ text: `User ID: ${user.id} | Messages attached above` });
 
 			// Get config
-			const guildConfig = getGuildConfig(guild.id);
 			const LogChannelId = guildConfig.purge_log_channel_id;
 
 			// Send to configured logs

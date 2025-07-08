@@ -171,13 +171,14 @@ module.exports = [
 			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 			// Declare vars
-			let guild, member, user, subcommand, key, value;
+			let guild, member, user, subcommand, key, value, guildConfig;
 
 			if (isSlashCommand) {
 				const interaction = interactionOrMessage;
 				guild = interaction.guild;
 				member = interaction.member;
 				user = interaction.user;
+
 				subcommand = interaction.options.getSubcommand();
 				key = interaction.options.getString('key');
 				value = interaction.options.getString('value');
@@ -187,8 +188,12 @@ module.exports = [
 				member = message.member;
 				user = message.author;
 
+				// Get config
+				guildConfig = getGuildConfig(guild.id);
+				const prefix = guildConfig.prefix;
+
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,config <view|set|reset> [key] [value]`');
+					return await message.reply(`Usage: \`${prefix}config <view|set|reset> [key] [value]\``);
 				}
 
 				subcommand = args[0].toLowerCase();
