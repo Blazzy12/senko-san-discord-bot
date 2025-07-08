@@ -128,8 +128,9 @@ module.exports = {
 				// Skip the first 2 messages (bot response and user command) and take only the requested amount
 				const messagesToDelete = messagesArray.slice(2, 2 + amount);
 
-				// Convert back to Collection
-				filterMessages = new Map();
+				// Convert back to Collection using Discord.js Collection
+				const { Collection } = require('discord.js');
+				filterMessages = new Collection();
 				messagesToDelete.forEach(msg => filterMessages.set(msg.id, msg));
 			}
 
