@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-
-const MUTE_LOG_CHANNEL_ID = '1388764830663442522';
+const { getGuildConfig } = require('../configuration/configuration.js');
 
 // Helper function to parse duration string to milliseconds
 function parseDuration(duration) {
@@ -76,7 +75,7 @@ module.exports = [
 
 				// Check if they're using it right
 				if (!args || args.length < 2) {
-					return await message.reply('Usage: `,mute <user> || <user_Id> <duration> [reason]`');
+					return await message.reply('Usage: `,mute <user|user_Id> <duration> [reason]`');
 				}
 
 				// Parse args
@@ -186,15 +185,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${target.id}` });
 
-				const logChannel = guild.channels.cache.get(MUTE_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [muteEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.mute_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [muteEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel');
+					console.log('No log channel configured for this guild.');
 				}
 
 				return isSlashCommand
@@ -256,7 +264,7 @@ module.exports = [
 
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,unmute <user> || <user_Id> [reason]`');
+					return await message.reply('Usage: `,unmute <user|user_Id> [reason]`');
 				}
 
 				// Parse args
@@ -347,15 +355,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${target.id}` });
 
-				const logChannel = guild.channels.cache.get(MUTE_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [unmuteEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.mute_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [unmuteEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel');
+					console.log('No log channel configured for this guild.');
 				}
 
 				return isSlashCommand

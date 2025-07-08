@@ -1,12 +1,17 @@
 const { Events, Collection } = require('discord.js');
+const { getGuildConfig } = require('./configuration.js'); // Import the config function
 
 module.exports = {
 	name: Events.MessageCreate,
 	async execute(message) {
-		// Ignore bots and messages without the prefix
-		if (message.author.bot) return;
+		// Ignore bots and DMs
+		if (message.author.bot || !message.guild) return;
 
-		const prefix = ','; // Change this to your desired prefix
+		// Get the guild's configuration to retrieve the dynamic prefix
+		const guildConfig = getGuildConfig(message.guild.id);
+		const prefix = guildConfig.prefix;
+
+		// Check if message starts with the guild's prefix
 		if (!message.content.startsWith(prefix)) return;
 
 		// Parse command and arguments

@@ -133,7 +133,7 @@ module.exports = [
 
 				// Check if usage is right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jwarn <user> || <user_Id> [reason]`');
+					return await message.reply('Usage: `,jwarn <user|user_Id> [reason]`');
 				}
 
 				// Parse args
@@ -292,7 +292,7 @@ module.exports = [
 
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jwarnings <user> || <user_Id>`');
+					return await message.reply('Usage: `,jwarnings <user|user_Id>`');
 				}
 
 				// Parse args
@@ -542,7 +542,7 @@ module.exports = [
 
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,jclearwarnings <user> || <user_Id>`');
+					return await message.reply('Usage: `,jclearwarnings <user|user_Id>`');
 				}
 
 				// Parse args

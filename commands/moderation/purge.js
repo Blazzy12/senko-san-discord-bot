@@ -1,6 +1,5 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, AttachmentBuilder } =  require('discord.js');
-
-const MODERATION_LOG_CHANNEL_ID = '1388764830663442522';
+const { getGuildConfig } = require('../configuration/configuration.js');
 
 module.exports = {
 	textEnabled: true,
@@ -260,24 +259,33 @@ module.exports = {
 				.setTimestamp()
 				.setFooter({ text: `User ID: ${user.id} | Messages attached above` });
 
-			const logChannel = guild.channels.cache.get(MODERATION_LOG_CHANNEL_ID);
-			if (logChannel && logChannel.isTextBased()) {
-				try {
-					const logA = { embeds: [purgeEmbed] };
+			// Get config
+			const guildConfig = getGuildConfig(guild.id);
+			const LogChannelId = guildConfig.purge_log_channel_id;
 
-					// Add text file
-					if (mArchive) {
-						const fName = `purge-${channel.name}-${Date.now()}.txt`;
-						const fAttach = new AttachmentBuilder(Buffer.from(mArchive, 'utf-8'), { name: fName });
-						logA.files = [fAttach];
+			// Send to configured logs
+			if (LogChannelId) {
+				const logChannel = guild.channels.cache.get(LogChannelId);
+				if (logChannel && logChannel.isTextBased()) {
+					try {
+						const logA = { embeds: [purgeEmbed] };
+
+						// Add text file
+						if (mArchive) {
+							const fName = `purge-${channel.name}-${Date.now()}.txt`;
+							const fAttach = new AttachmentBuilder(Buffer.from(mArchive, 'utf-8'), { name: fName });
+							logA.files = [fAttach];
+						}
+
+						await logChannel.send(logA);
+					} catch (error) {
+						console.error('Error sending files to log channel:', error);
 					}
-
-					await logChannel.send(logA);
-				} catch (error) {
-					console.error('Error sending files to log channel:', error);
+				} else {
+					console.warn('Configured log channel not found or is not a text channel.');
 				}
 			} else {
-				console.warn('Log channel not found or is not a text channel.');
+				console.log('No log channel configured for this guild.');
 			}
 
 		} catch (error) {

@@ -1,7 +1,7 @@
 // Init
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { getGuildConfig } = require('../configuration/configuration.js');
 
-const LOCKDOWN_LOG_CHANNEL_ID = '1388764830663442522';
 const ALLOWED_ROLES = ['1333691633551540275', '1361410527389286550', '1388259374111264791', '1360309600825639153', '1333769686583611392', '1382920873362722896', '1388335848138739893'];
 
 // Data storage, will eventually need to be replaced with sqlite3
@@ -173,15 +173,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `Channel ID: ${channel.id}` });
 
-				const logChannel = guild.channels.cache.get(LOCKDOWN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [lockEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.lockdown_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [lockEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel');
+					console.log('No log channel configured for this guild.');
 				}
 
 				// Send the confirm response
@@ -299,15 +308,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `Channel ID: ${channel.id}` });
 
-				const logChannel = guild.channels.cache.get(LOCKDOWN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [unlockedEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.lockdown_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [unlockedEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel');
+					console.log('No log channel configured for this guild.');
 				}
 
 				// Send the confirm response

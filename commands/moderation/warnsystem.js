@@ -6,7 +6,7 @@ const path = require('path');
 const databasePath = path.join(__dirname, 'warnings.db');
 const db = new Database(databasePath);
 
-const WARN_LOG_CHANNEL_ID = '1388444962625949706';
+const { getGuildConfig } = require('../configuration/configuration.js');
 
 // Create the warnings table if it were to not exist
 db.exec(`CREATE TABLE IF NOT EXISTS warnings (
@@ -135,7 +135,7 @@ module.exports = [
 
 				// Check if usage is right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,warn <user> || <user_Id> [reason]`');
+					return await message.reply('Usage: `,warn <user|user_Id> [reason]`');
 				}
 
 				// Parse args
@@ -221,15 +221,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${target.id}` });
 
-				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [warnEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.warn_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [warnEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel.');
+					console.log('No log channel configured for this guild.');
 				}
 
 				try {
@@ -305,7 +314,7 @@ module.exports = [
 
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,warnings <user> || <user_Id>`');
+					return await message.reply('Usage: `,warnings <user|user_Id>`');
 				}
 
 				// Parse args
@@ -561,7 +570,7 @@ module.exports = [
 
 				// Check if they're using it right
 				if (!args || args.length < 1) {
-					return await message.reply('Usage: `,clearwarnings <user> || <user_Id>`');
+					return await message.reply('Usage: `,clearwarnings <user|user_Id>`');
 				}
 
 				// Parse args
@@ -615,16 +624,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${target.id}` });
 
-				// Log to channel
-				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [clearEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.warn_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [clearEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel.');
+					console.log('No log channel configured for this guild.');
 				}
 
 				// Reply
@@ -732,16 +749,24 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `User ID: ${removedWarning.user_id}` });
 
-				// Log to channel
-				const logChannel = guild.channels.cache.get(WARN_LOG_CHANNEL_ID);
-				if (logChannel && logChannel.isTextBased()) {
-					try {
-						await logChannel.send({ embeds: [removeEmbed] });
-					} catch (logError) {
-						console.error('Error sending log to channel:', logError);
+				// Get config
+				const guildConfig = getGuildConfig(guild.id);
+				const LogChannelId = guildConfig.warn_log_channel_id;
+
+				// Send to configured logs
+				if (LogChannelId) {
+					const logChannel = guild.channels.cache.get(LogChannelId);
+					if (logChannel && logChannel.isTextBased()) {
+						try {
+							await logChannel.send({ embeds: [removeEmbed] });
+						} catch (logError) {
+							console.error('Error sending log to log channel:', logError);
+						}
+					} else {
+						console.warn('Configured log channel not found or is not a text channel.');
 					}
 				} else {
-					console.warn('Log channel not found or is not a text channel.');
+					console.log('No log channel configured for this guild.');
 				}
 
 				// Reply

@@ -54,6 +54,8 @@ module.exports = [
 			'space-infix-ops': 'warn',
 			'spaced-comment': 'warn',
 
+			'no-case-declarations': 'warn',
+
 			// Code quality - keep the important ones
 			'no-var': 'error',
 			'prefer-const': 'error',
