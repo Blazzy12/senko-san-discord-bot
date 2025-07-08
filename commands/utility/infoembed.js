@@ -14,7 +14,7 @@ module.exports = {
 			.setColor(0xFFCCCB)
 			.setTitle('📖 **__INTRODUCTION OF RULES__** 📖')
 			.setDescription(
-				'<:9109869264907838241:9109869264907838241> # Discord Rules:',
+				'\n # <a:arrow:1364978340120887307> Discord Rules:',
 			);
 
 		// Send to the channel where the interaction was triggered
