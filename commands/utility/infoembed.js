@@ -9,7 +9,8 @@ module.exports = {
 	async execute(interaction) {
 		const serverInfoEmbed = new EmbedBuilder()
 			.setColor(0xFFCCCB)
-			.setThumbnail('https://i.imgur.com/Lp05CQ1.gif')
+			.setImage('https://i.imgur.com/Lp05CQ1.gif');
+
 		await interaction.reply({ embeds: [serverInfoEmbed] });
 	},
 };
