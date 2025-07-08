@@ -8,7 +8,6 @@ module.exports = {
 		.setDescription('awd'),
 	async execute(interaction) {
 		const serverInfoEmbed = new EmbedBuilder()
-			.setTitle('Rules')
 			.setColor(0xFFCCCB)
 			.setDescription(
 				'https://i.imgur.com/Lp05CQ1.gif',
