@@ -21,6 +21,7 @@ const client = new Client({
 client.commands = new Collection();
 client.textCommands = new Collection();
 client.cooldowns = new Collection();
+client.selectMenus = new Collection();
 
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
