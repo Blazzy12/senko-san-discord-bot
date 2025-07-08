@@ -74,6 +74,7 @@ module.exports = {
 					'Senko-San is made by **_blazzy** with love!',
 					'Source - https://github.com/Blazzy12/senko-san-discord-bot',
 					'Support - https://discord.gg/E7v6sPcKd2',
+					'Invite - [Click Me!](https://discord.com/oauth2/authorize?client_id=1388229912149622814&permissions=8&integration_type=0&scope=bot)',
 					'',
 					'Pop me a message if you have suggestions!',
 				],
