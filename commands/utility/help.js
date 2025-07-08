@@ -62,7 +62,7 @@ module.exports = {
 
 		const embed = new EmbedBuilder()
 			.setColor(0xFFB6C1)
-			.setAuthor({ name: 'Senko-San', iconURL: guild.me.displayAvatarURL()})
+			.setAuthor({ name: 'Senko-San', iconURL: guild.members.me.displayAvatarURL() })
 			.setDescription(
 				'## Senko-San Commands\n' +
 				'*Just click the selection menu at the bottom silly billy*\n' +
