@@ -1,5 +1,5 @@
 const { Events, Collection } = require('discord.js');
-const { getGuildConfig } = require('./configuration.js'); // Import the config function
+const { getGuildConfig } = require('../commands/configuration/configuration.js');
 
 module.exports = {
 	name: Events.MessageCreate,
