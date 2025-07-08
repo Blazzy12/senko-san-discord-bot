@@ -17,7 +17,11 @@ module.exports = {
 				'<:9109869264907838241:9109869264907838241> # Discord Rules:',
 			);
 
-		await interaction.reply({ embeds: [serverInfoEmbed1] });
-		await interaction.reply({ embeds: [serverInfoEmbed2] });
+		// Send to the channel where the interaction was triggered
+		await interaction.channel.send({ embeds: [serverInfoEmbed1] });
+		await interaction.channel.send({ embeds: [serverInfoEmbed2] });
+
+		// Reply to the interaction to acknowledge it was processed
+		await interaction.reply({ content: 'Rules embeds sent!', ephemeral: true });
 	},
 };
