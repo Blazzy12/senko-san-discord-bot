@@ -20,7 +20,7 @@ module.exports = {
 
 		const now = Date.now();
 		const timestamps = cooldowns.get(selectMenu.data.name);
-		const defaultCooldownDuration = 2;
+		const defaultCooldownDuration = 1;
 		const cooldownAmount = (selectMenu.cooldown ?? defaultCooldownDuration) * 1_000;
 
 		if (timestamps.has(interaction.user.id)) {

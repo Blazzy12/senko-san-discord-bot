@@ -5,7 +5,6 @@ module.exports = {
 	data: {
 		name: 'help',
 	},
-	cooldown: 3,
 	async execute(interaction) {
 		const selectedValue = interaction.values[0];
 
