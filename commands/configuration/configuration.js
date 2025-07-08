@@ -115,111 +115,112 @@ module.exports.setConfigValue = setConfigValue;
 module.exports.resetGuildConfig = resetGuildConfig;
 
 // Commands
-module.exports.commands = {
-	textEnabled: true,
-	category: 'configuration',
-	data: new SlashCommandBuilder()
-		.setName('config')
-		.setDescription('View or modify your server configuration')
-		.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('view')
-				.setDescription('View your current server configuration'),
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('set')
-				.setDescription('Set a configuration value')
-				.addStringOption(option =>
-					option.setName('key')
-						.setDescription('Configuration key to set')
-						.setRequired(true)
-						.addChoices(
-							{ name: 'Prefix', value: 'prefix' },
-							{ name: 'Warning Log Channel', value: 'warn_log_channel_id' },
-							{ name: 'Kick Log Channel', value: 'kick_log_channel_id' },
-							{ name: 'Ban Log Channel', value: 'ban_log_channel_id' },
-							{ name: 'Mute Log Channel', value: 'mute_log_channel_id' },
-							{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
-							{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
-						),
-				)
-				.addStringOption(option =>
-					option.setName('value')
-						.setDescription('New value for this configuration')
-						.setRequired(true)
-				),
-		)
-		.addSubcommand(subcommand =>
-			subcommand
-				.setName('reset')
-				.setDescription('Reset server configuration to defaults'),
-		),
-	async execute(interactionOrMessage, args) {
-		// Check if slash command
-		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
+module.exports = [
+	{
+		textEnabled: true,
+		category: 'configuration',
+		data: new SlashCommandBuilder()
+			.setName('config')
+			.setDescription('View or modify your server configuration')
+			.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+			.addSubcommand(subcommand =>
+				subcommand
+					.setName('view')
+					.setDescription('View your current server configuration'),
+			)
+			.addSubcommand(subcommand =>
+				subcommand
+					.setName('set')
+					.setDescription('Set a configuration value')
+					.addStringOption(option =>
+						option.setName('key')
+							.setDescription('Configuration key to set')
+							.setRequired(true)
+							.addChoices(
+								{ name: 'Prefix', value: 'Prefix' },
+								{ name: 'Warning Log Channel', value: 'warn_log_channel_id' },
+								{ name: 'Kick Log Channel', value: 'kick_log_channel_id' },
+								{ name: 'Mute Log Channel', value: 'mute_log_channel_id' },
+								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
+								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
+							),
+					)
+					.addStringOption(option =>
+						option.setName('value')
+							.setDescription('New value for this configuration')
+							.setRequired(true)
+					),
+			)
+			.addSubcommand(subcommand =>
+				subcommand
+					.setName('reset')
+					.setDescription('Reset server configuration to defaults'),
+			),
+		async execute(interactionOrMessage, args) {
+			// Check if slash command
+			const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-		// Declare vars
-		let guild, member, user, subcommand, key, value;
+			// Declare vars
+			let guild, member, user, subcommand, key, value;
 
-		if (isSlashCommand) {
-			const interaction = interactionOrMessage;
-			guild = interaction.guild;
-			member = interaction.member;
-			user = interaction.user;
-			subcommand = interaction.options.getSubcommand();
-			key = interaction.options.getString('key');
-			value = interaction.options.getString('value');
-		} else {
-			const message = interactionOrMessage;
-			guild = message.guild;
-			member = message.member;
-			user = message.author;
+			if (isSlashCommand) {
+				const interaction = interactionOrMessage;
+				guild = interaction.guild;
+				member = interaction.member;
+				user = interaction.user;
+				subcommand = interaction.options.getSubcommand();
+				key = interaction.options.getString('key');
+				value = interaction.options.getString('value');
+			} else {
+				const message = interactionOrMessage;
+				guild = message.guild;
+				member = message.member;
+				user = message.author;
 
-			if (!args || args.length < 1) {
-				return await message.reply('Usage: `,config <view|set|reset> [key] [value]`');
+				if (!args || args.length < 1) {
+					return await message.reply('Usage: `,config <view|set|reset> [key] [value]`');
+				}
+
+				subcommand = args[0].toLowerCase();
+				key = args[1];
+				value = args.slice(2).join(' ');
 			}
 
-			subcommand = args[0].toLowerCase();
-			key = args[1];
-			value = args.slice(2).join(' ');
-		}
-
-		// Permission Check
-		if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) {
-			const content = 'You would need "Manage Server" permissions kiddo to use this command.';
-			return isSlashCommand
-				? await interactionOrMessage.reply({ content, ephemeral: true })
-				: await interactionOrMessage.reply(content);
-		}
-
-		try {
-			switch (subcommand) {
-			case 'view':
-				await handleViewConfig(interactionOrMessage, guild, isSlashCommand);
-				break;
-			case 'set':
-				await handleSetConfig(interactionOrMessage, guild, key, value, isSlashCommand);
-				break;
-			case 'reset':
-				await handleResetConfig(interactionOrMessage, guild, isSlashCommand);
-				break;
-			default:
-				const content = 'Invalid subcommand. Use `view`, `set`, or `reset`.';
+			// Permission Check
+			if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+				const content = 'You would need "Manage Server" permissions kiddo to use this command.';
 				return isSlashCommand
 					? await interactionOrMessage.reply({ content, ephemeral: true })
 					: await interactionOrMessage.reply(content);
 			}
-		} catch (error) {
-			console.error('!IMPORTANT! Error in config command:', error);
-			const content = 'There was an error processing your configuration request';
-			return isSlashCommand
-				? await interactionOrMessage.reply({ content, ephemeral: true })
-				: await interactionOrMessage.reply(content);
-		}
+
+			try {
+				switch (subcommand) {
+				case 'view':
+					await handleViewConfig(interactionOrMessage, guild, isSlashCommand);
+					break;
+				case 'set':
+					await handleSetConfig(interactionOrMessage, guild, key, value, isSlashCommand);
+					break;
+				case 'reset':
+					await handleResetConfig(interactionOrMessage, guild, isSlashCommand);
+					break;
+				default:
+					const content = 'Invaild subcommand, Use `view`, `set`, or `reset`.';
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
+				}
+			} catch (error) {
+				console.error('!IMPORTANT! Error in config command:', error);
+				const content = 'There was an error processing your configuration request';
+				return isSlashCommand
+					? await interactionOrMessage.reply({ content, ephemeral: true })
+					: await interactionOrMessage.reply(content);
+			}
+		},
 	},
-},
+];
 
 async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
@@ -230,12 +231,12 @@ async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 		.setThumbnail(guild.iconURL({ dynamic: true }))
 		.addFields(
 			{ name: '❓ Prefix', value: `\`${config.prefix}\``, inline: true },
-			{ name: '⚠️ Warn Log Channel', value: config.warn_log_channel_id ? `<#${config.warn_log_channel_id}>` : '`Not set`', inline: true },
-			{ name: '🥾 Kick Log Channel', value: config.kick_log_channel_id ? `<#${config.kick_log_channel_id}>` : '`Not set`', inline: true },
-			{ name: '🛑 Ban Log Channel', value: config.ban_log_channel_id ? `<#${config.ban_log_channel_id}>` : '`Not set`', inline: true },
-			{ name: '🔇 Mute Log Channel', value: config.mute_log_channel_id ? `<#${config.mute_log_channel_id}>` : '`Not set`', inline: true },
-			{ name: '🔒 Lockdown Log Channel', value: config.lockdown_log_channel_id ? `<#${config.lockdown_log_channel_id}>` : '`Not set`', inline: true },
-			{ name: '🗡️ Purge Log Channel', value: config.purge_log_channel_id ? `<#${config.purge_log_channel_id}>` : '`Not set`', inline: true },
+			{ name: '⚠️ Warn Log Channel', value: config.warn_log_channel_id ? `<#${config.warn_log_channel_id}>` : '`Not set (warn_log_channel_id)`', inline: true },
+			{ name: '🥾 Kick Log Channel', value: config.kick_log_channel_id ? `<#${config.kick_log_channel_id}>` : '`Not set (kick_log_channel_id)`', inline: true },
+			{ name: '🛑 Ban Log Channel', value: config.ban_log_channel_id ? `<#${config.ban_log_channel_id}>` : '`Not set (ban_log_channel_id)`', inline: true },
+			{ name: '🔇 Mute Log Channel', value: config.mute_log_channel_id ? `<#${config.mute_log_channel_id}>` : '`Not set (mute_log_channel_id)`', inline: true },
+			{ name: '🔒 Lockdown Log Channel', value: config.lockdown_log_channel_id ? `<#${config.lockdown_log_channel_id}>` : '`Not set (lockdown_log_channel_id)`', inline: true },
+			{ name: '🗡️ Purge Log Channel', value: config.purge_log_channel_id ? `<#${config.purge_log_channel_id}>` : '`Not set (purge_log_channel_id)`', inline: true },
 		)
 		.setTimestamp()
 		.setFooter({ text: `Server ID: ${guild.id}` });
@@ -275,7 +276,7 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 		const channelMatch = value.match(/^<#(\d+)>$/) || value.match(/^(\d+)$/);
 
 		if (!channelMatch) {
-			const content = 'Please provide a valid channel mention or ID.';
+			const content = 'Please provide a vaild channel mention or ID.';
 			return isSlashCommand
 				? await interactionOrMessage.reply({ content, ephemeral: true })
 				: await interactionOrMessage.reply(content);
@@ -323,7 +324,7 @@ async function handleResetConfig(interactionOrMessage, guild, isSlashCommand) {
 
 	const embed = new EmbedBuilder()
 		.setColor(0xff9900)
-		.setTitle(`🔄 Configuration Reset - ${guild.name}`)
+		.setTitle('🔄 Configuration Reset - ${guild.name}')
 		.setDescription('All server configuration has been reset to default values.')
 		.setTimestamp()
 		.setFooter({ text: `Reset by ${interactionOrMessage.user?.username || interactionOrMessage.author.username}` });
