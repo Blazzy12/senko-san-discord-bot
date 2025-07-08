@@ -16,7 +16,7 @@ module.exports = {
 				'## <a:arrow:1364978340120887307> Discord Rules:\n' +
 				'- This server follows Discord\'s [TOS](https://discord.com/terms). Any violation of these terms will be taken seriously and will result in a penalty. It\'s our task to make sure the server is a safe place for our members to hang out.',
 			)
-			.setFooter('https://i.imgur.com/IGyxWy8.gif');
+			.setFooter({ iconURL: 'https://i.imgur.com/IGyxWy8.gif' });
 
 		// Send to the channel where the interaction was triggered
 		await interaction.channel.send({ embeds: [serverInfoEmbed1] });
