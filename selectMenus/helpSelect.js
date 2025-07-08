@@ -46,6 +46,7 @@ module.exports = {
 				description: 'Useful utility commands',
 				commands: [
 					'`,help` - This command',
+					'`,avatar [user|user_Id]` - This command',
 					'`,serverinfo` - Get server information',
 					'`,ping` - Get the bots ping',
 					'** All compatible with slash commands**',

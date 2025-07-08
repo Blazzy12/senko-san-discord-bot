@@ -65,7 +65,7 @@ module.exports = {
 			.setAuthor({ name: 'Senko-San', iconURL: guild.members.me.displayAvatarURL() })
 			.setDescription(
 				'## Senko-San Commands\n' +
-				'*Just click the selection menu at the bottom silly billy*\n' +
+				'*Just click the selection menu at the bottom silly billy~*\n' +
 				'## Features\n' +
 				'`Warning System`, `Moderation`, `Utility`, `Fun`, `Configuration`, `Info`\n',
 			)
