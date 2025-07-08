@@ -2,6 +2,34 @@ const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('disc
 const Database = require('better-sqlite3');
 const path = require('path');
 
+// Config constants
+const VALID_CONFIG_KEYS = [
+	'prefix',
+	'warn_log_channel_id',
+	'kick_log_channel_id',
+	'ban_log_channel_id',
+	'mute_log_channel_id',
+	'lockdown_log_channel_id',
+	'purge_log_channel_id',
+];
+
+// Create a mapping for user-friendly names to actual keys
+const KEY_ALIASES = {
+	'prefix': 'prefix',
+	'warn': 'warn_log_channel_id',
+	'warning': 'warn_log_channel_id',
+	'warn_log': 'warn_log_channel_id',
+	'kick': 'kick_log_channel_id',
+	'kick_log': 'kick_log_channel_id',
+	'ban': 'ban_log_channel_id',
+	'ban_log': 'ban_log_channel_id',
+	'mute': 'mute_log_channel_id',
+	'mute_log': 'mute_log_channel_id',
+	'lockdown': 'lockdown_log_channel_id',
+	'lockdown_log': 'lockdown_log_channel_id',
+	'purge': 'purge_log_channel_id',
+	'purge_log': 'purge_log_channel_id',
+};
 
 // Init
 const databasePath = path.join(__dirname, 'guild_config.db');
@@ -30,20 +58,6 @@ const configStatements = {
 		(guild_id, prefix, warn_log_channel_id, kick_log_channel_id, ban_log_channel_id, mute_log_channel_id, lockdown_log_channel_id, purge_log_channel_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	`),
-	updateConfigValue: configDB.prepare(`
-		INSERT OR REPLACE INTO guild_config
-		(guild_id, prefix, warn_log_channel_id, kick_log_channel_id, ban_log_channel_id, mute_log_channel_id, lockdown_log_channel_id, purge_log_channel_id)
-		VALUES (
-			?,
-			COALESCE(?, (SELECT prefix FROM guild_config WHERE guild_id = ?), ','),
-			COALESCE(?, (SELECT warn_log_channel_id FROM guild_config WHERE guild_id = ?)),
-			COALESCE(?, (SELECT kick_log_channel_id FROM guild_config WHERE guild_id = ?)),
-			COALESCE(?, (SELECT ban_log_channel_id FROM guild_config WHERE guild_id = ?)),
-			COALESCE(?, (SELECT mute_log_channel_id FROM guild_config WHERE guild_id = ?)),
-			COALESCE(?, (SELECT lockdown_log_channel_id FROM guild_config WHERE guild_id = ?)),
-			COALESCE(?, (SELECT purge_log_channel_id FROM guild_config WHERE guild_id = ?))
-		)
-	`),
 	resetGuildConfig: configDB.prepare('DELETE FROM guild_config WHERE guild_id = ?'),
 };
 
@@ -71,35 +85,35 @@ function getGuildConfig(guildId) {
 }
 
 function setConfigValue(guildId, key, value) {
+	 const currentConfig = getGuildConfig(guildId);
 
-	const currentConfig = getGuildConfig(guildId);
-
-	// Map config keys
-	const configMap = {
-		prefix: 1,
-		warn_log_channel_id: 2,
-		kick_log_channel_id: 3,
-		ban_log_channel_id: 4,
-		mute_log_channel_id: 5,
-		lockdown_log_channel_id: 6,
-		purge_log_channel_id: 7,
+	// Create config object with current values
+	const configUpdate = {
+		guild_id: guildId,
+		prefix: currentConfig.prefix,
+		warn_log_channel_id: currentConfig.warn_log_channel_id,
+		kick_log_channel_id: currentConfig.kick_log_channel_id,
+		ban_log_channel_id: currentConfig.ban_log_channel_id,
+		mute_log_channel_id: currentConfig.mute_log_channel_id,
+		lockdown_log_channel_id: currentConfig.lockdown_log_channel_id,
+		purge_log_channel_id: currentConfig.purge_log_channel_id
 	};
 
-	// Create array with null values
-	const params = new Array(15).fill(null); // configs * 2 + guild_id
-	params[0] = guildId;
+	// Update the specific key
+	configUpdate[key] = value;
 
-	// Set values corresponding to SELECT position
-	const position = configMap[key];
+	configStatements.setGuildConfig.run(
+		configUpdate.guild_id,
+		configUpdate.prefix,
+		configUpdate.warn_log_channel_id,
+		configUpdate.kick_log_channel_id,
+		configUpdate.ban_log_channel_id,
+		configUpdate.mute_log_channel_id,
+		configUpdate.lockdown_log_channel_id,
+		configUpdate.purge_log_channel_id
+	);
 
-	if (position) {
-		params[position] = value;
-		params[position + 7] = guildId; // COALESCE
-	}
-
-	configStatements.updateConfigValue.run(...params);
 	return true;
-
 }
 
 function resetGuildConfig(guildId) {
@@ -132,7 +146,7 @@ module.exports = [
 							.setDescription('Configuration key to set')
 							.setRequired(true)
 							.addChoices(
-								{ name: 'Prefix', value: 'Prefix' },
+								{ name: 'Prefix', value: 'prefix' },
 								{ name: 'Warning Log Channel', value: 'warn_log_channel_id' },
 								{ name: 'Kick Log Channel', value: 'kick_log_channel_id' },
 								{ name: 'Ban Log Channel', value: 'ban_log_channel_id' },
@@ -180,6 +194,26 @@ module.exports = [
 				subcommand = args[0].toLowerCase();
 				key = args[1];
 				value = args.slice(2).join(' ');
+
+				// Validate key for text commands (only for 'set' subcommand)
+				if (subcommand === 'set') {
+					if (!key) {
+						return await message.reply('Please provide a configuration key to set.\n\nValid keys: `prefix`, `warn`, `kick`, `ban`, `mute`, `lockdown`, `purge`');
+					}
+
+					// Normalize the key using aliases
+					const normalizedKey = KEY_ALIASES[key.toLowerCase()];
+					if (!normalizedKey) {
+						return await message.reply(`Invalid configuration key: \`${key}\`\n\nValid keys: \`${Object.keys(KEY_ALIASES).join('`, `')}\``);
+					}
+
+					// Update key to the normalized version
+					key = normalizedKey;
+
+					if (!value) {
+						return await message.reply('Please provide a value to set for this configuration key.');
+					}
+				}
 			}
 
 			// Permission Check
@@ -253,7 +287,7 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 	// Validate
 	let processedValue = value;
 
-	switch (key) {
+	switch (key.toLowerCase()) {
 	case 'prefix':
 		if (value.length > 5) {
 			const content = 'Prefix cannot be longer than 5 characters.';
@@ -320,7 +354,7 @@ async function handleResetConfig(interactionOrMessage, guild, isSlashCommand) {
 
 	const embed = new EmbedBuilder()
 		.setColor(0xff9900)
-		.setTitle('🔄 Configuration Reset - ${guild.name}')
+		.setTitle(`🔄 Configuration Reset - ${guild.name}`)
 		.setDescription('All server configuration has been reset to default values.')
 		.setTimestamp()
 		.setFooter({ text: `Reset by ${interactionOrMessage.user?.username || interactionOrMessage.author.username}` });
