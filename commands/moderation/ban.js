@@ -26,7 +26,7 @@ module.exports = {
 		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 		// Declare vars
-		let target, reason, silent, guild, member, user, interaction;
+		let target, reason, silent, guild, member, user, interaction, guildConfig;
 
 		if (isSlashCommand) {
 			interaction = interactionOrMessage;
@@ -34,9 +34,13 @@ module.exports = {
 			member = interaction.member;
 			user = interaction.user;
 
+			// Get config
+			guildConfig = getGuildConfig(guild.id);
+
 			target = interaction.options.getUser('user');
 			reason = interaction.options.getString('reason') ?? 'No reason provided.';
 			silent = interaction.options.getBoolean('silent') ?? false;
+
 		} else {
 			// Text command parsing
 			const message = interactionOrMessage;
@@ -44,10 +48,13 @@ module.exports = {
 			member = message.member;
 			user = message.author;
 
+			// Get config
+			guildConfig = getGuildConfig(guild.id);
+			const prefix = guildConfig.prefix;
 
 			// Check if they're using it right
 			if (!args || args.length < 1) {
-				return await message.reply('Usage: `,ban <user|user_Id> [reason]`');
+				return await message.reply(`Usage: \`${prefix}ban <user|user_Id> [reason]\``);
 			}
 
 			// Parse args
@@ -135,8 +142,6 @@ module.exports = {
 				.setTimestamp()
 				.setFooter({ text: `User ID: ${target.id}` });
 
-			// Get config
-			const guildConfig = getGuildConfig(guild.id);
 			const LogChannelId = guildConfig.ban_log_channel_id;
 
 			// Send to configured logs
