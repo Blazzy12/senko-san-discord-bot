@@ -3,7 +3,7 @@ const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('disc
 module.exports = {
 	category: 'utility',
 	data: new SlashCommandBuilder()
-		.setName('rulesembed')
+		.setName('adminsendrulesembed')
 		.setDescription('awd')
 		.setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels),
 	async execute(interaction) {
