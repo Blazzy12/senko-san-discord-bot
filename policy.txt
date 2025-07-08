@@ -1,0 +1,69 @@
+# Privacy Policy
+
+**Effective Date:** July 8, 2025
+
+## 1. Information We Collect
+
+When you use Senko-San, we may collect the following information:
+
+### Automatically Collected Information:
+- Discord user IDs (numerical identifiers)
+- Discord server/guild IDs
+- Channel IDs where commands are used
+- Timestamps of bot interactions
+- Command usage data and statistics
+
+### User-Provided Information:
+- Messages sent as commands to the bot
+- Any data you voluntarily provide through bot commands
+- Server configuration settings
+
+## 2. How We Use Your Information
+
+We use collected information to:
+- Provide and maintain the bot's functionality
+- Respond to your commands and requests
+- Improve the bot's performance and features
+- Generate usage statistics and analytics
+- Debug issues and provide technical support
+
+## 3. Data Storage and Security
+
+- All data is stored securely on our servers
+- We implement reasonable security measures to protect your information
+- Data is retained only as long as necessary for the bot's operation
+- We do not store message content beyond what's necessary for command processing
+
+## 4. Data Sharing
+
+We do not sell, trade, or share your personal information with third parties, except:
+- When required by law or legal process
+- To protect our rights or the safety of users
+- With your explicit consent
+
+## 5. Third-Party Services
+
+Senko-San may integrate with third-party services (such as APIs). These services have their own privacy policies, and we encourage you to review them.
+
+## 6. Data Deletion
+
+You can request deletion of your data by:
+- Contacting us directly
+- Removing the bot from your server
+- Using any built-in data deletion commands (if available)
+
+## 7. Children's Privacy
+
+The bot is not intended for users under 13 years of age. We do not knowingly collect information from children under 13.
+
+## 8. Changes to This Policy
+
+We may update this Privacy Policy periodically. We will notify users of significant changes through appropriate channels.
+
+## 9. Contact Information
+
+For questions about this Privacy Policy or to request data deletion, contact: _blazzy on Discord
+
+---
+
+*Last updated: July 8, 2025*

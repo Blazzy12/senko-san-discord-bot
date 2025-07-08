@@ -1,0 +1,51 @@
+# Terms of Service
+
+**Effective Date:** July 8, 2025
+
+## 1. Acceptance of Terms
+
+By using Senko-San ("the Bot"), you agree to these Terms of Service. If you do not agree, please do not use the Bot.
+
+## 2. Description of Service
+
+Senko-San is a Discord bot that provides a wide variety of features and utilities for Discord servers. It's an all-around bot with multiple functionalities to enhance your server experience. The Bot is provided "as is" without warranties of any kind.
+
+## 3. User Conduct
+
+When using the Bot, you agree to:
+- Follow Discord's Terms of Service and Community Guidelines
+- Not use the Bot for illegal activities or to harass other users
+- Not attempt to exploit, hack, or abuse the Bot's functionality
+- Not spam or flood commands
+
+## 4. Privacy
+
+The Bot may collect and store:
+- Discord user IDs and server IDs
+- Messages sent as commands to the Bot
+- Usage statistics and error logs
+
+We do not sell or share your data with third parties. Data is used solely to provide and improve the Bot's functionality.
+
+## 5. Limitations and Disclaimers
+
+- The Bot may experience downtime or interruptions
+- We are not responsible for any damages resulting from the Bot's use
+- The Bot's functionality may change or be discontinued at any time
+- We do not guarantee the accuracy of information provided by the Bot
+
+## 6. Termination
+
+We reserve the right to restrict or terminate access to the Bot for users who violate these terms or Discord's policies.
+
+## 7. Changes to Terms
+
+These terms may be updated periodically. Continued use of the Bot after changes constitutes acceptance of the new terms.
+
+## 8. Contact
+
+For questions about these terms, contact: _blazzy on Discord
+
+---
+
+*Last updated: July 8, 2025*
