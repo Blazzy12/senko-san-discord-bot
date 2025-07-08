@@ -176,13 +176,13 @@ module.exports = {
 			// Delete messages
 			const deletedMessages = await channel.bulkDelete(filterMessages, true);
 
+			let sContent;
 			// Tell them it's done
 			if (isSlashCommand) {
-				return;
+				sContent = `Nya~ Senko has banished **${deletedMessages.size}** dang message(s)!`;
 			} else {
-				deletedMessages.size = deletedMessages.size - 2;
+				sContent = `Nya~ Senko has banished **${deletedMessages.size - 2}** dang message(s)!`;
 			}
-			const sContent = `Nya~ Senko has banished **${deletedMessages.size}** dang message(s)!`;
 
 			if (isSlashCommand) {
 				await interactionOrMessage.editReply({ content: sContent });
