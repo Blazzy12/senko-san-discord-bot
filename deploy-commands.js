@@ -1,5 +1,5 @@
 const { REST, Routes } = require('discord.js');
-const { clientId, guildId, token } = require('./config.json');
+const { clientId, token } = require('./config.json'); // Removed guildId since we're deploying globally
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -61,18 +61,20 @@ for (const folder of commandFolders) {
 // Construct and prepare an instance of the REST module
 const rest = new REST().setToken(token);
 
-// and deploy your commands!
+// and deploy your commands globally!
 (async () => {
 	try {
-		console.log(`\n🚀 Started refreshing ${commands.length} application (/) commands.`);
+		console.log(`\n🌍 Started refreshing ${commands.length} global application (/) commands.`);
+		console.log(`⚠️  Note: Global commands can take up to 1 hour to propagate across all Discord servers.`);
 
-		// The put method is used to fully refresh all commands in the guild with the current set
+		// The put method is used to fully refresh all global commands
 		const data = await rest.put(
-			Routes.applicationGuildCommands(clientId, guildId),
+			Routes.applicationCommands(clientId), // Changed from applicationGuildCommands to applicationCommands
 			{ body: commands },
 		);
 
-		console.log(`✅ Successfully reloaded ${data.length} application (/) commands.`);
+		console.log(`✅ Successfully reloaded ${data.length} global application (/) commands.`);
+		console.log(`🕐 Commands will be available globally within 1 hour.`);
 	} catch (error) {
 		// And of course, make sure you catch and log any errors!
 		console.error('❌ [DEPLOY ERROR]', error);
