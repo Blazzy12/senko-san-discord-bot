@@ -64,6 +64,16 @@ const rest = new REST().setToken(token);
 // and deploy your commands globally!
 (async () => {
 	try {
+		console.log(`\n🗑️  Clearing all existing global commands...`);
+
+		// Clear all existing commands first
+		await rest.put(
+			Routes.applicationCommands(clientId),
+			{ body: [] },
+		);
+
+		console.log(`✅ Successfully cleared all existing global commands.`);
+
 		console.log(`\n🌍 Started refreshing ${commands.length} global application (/) commands.`);
 		console.log(`⚠️  Note: Global commands can take up to 1 hour to propagate across all Discord servers.`);
 
