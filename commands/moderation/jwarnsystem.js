@@ -92,6 +92,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['jw'],
 		data: new SlashCommandBuilder()
 			.setName('jwarn')
 			.setDescription('Distribute a warning to a member.')
@@ -260,6 +261,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['jwarns', 'jws'],
 		data: new SlashCommandBuilder()
 			.setName('jwarnings')
 			.setDescription('View the warnings of a member.')
@@ -515,6 +517,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['jcw', 'jclearwarn', 'jwarnclear', 'jwc'],
 		data: new SlashCommandBuilder()
 			.setName('jclearwarnings')
 			.setDescription('Clear the warnings of a member.')
@@ -626,6 +629,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['jrw', 'jwarnremove', 'jwr'],
 		data: new SlashCommandBuilder()
 			.setName('jremovewarn')
 			.setDescription('Clear the warn of a member.')

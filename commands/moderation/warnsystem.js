@@ -92,6 +92,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['w'],
 		data: new SlashCommandBuilder()
 			.setName('warn')
 			.setDescription('Distribute a warning to a member.')
@@ -282,6 +283,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['warns', 'ws'],
 		data: new SlashCommandBuilder()
 			.setName('warnings')
 			.setDescription('View the warnings of a member.')
@@ -543,6 +545,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['cw', 'clearwarn', 'warnclear', 'wc'],
 		data: new SlashCommandBuilder()
 			.setName('clearwarnings')
 			.setDescription('Clear the warnings of a member.')
@@ -676,6 +679,7 @@ module.exports = [
 	{
 		textEnabled: true,
 		category: 'moderation',
+		aliases: ['rw', 'warnremove', 'wr'],
 		data: new SlashCommandBuilder()
 			.setName('removewarn')
 			.setDescription('Clear the warn of a member.')
