@@ -7,6 +7,7 @@ const CACHE_DURATION = 5 * 60 * 1000;
 module.exports = {
 	category: 'utility',
 	textEnabled: true,
+	aliases: ['si', 'info'],
 	data: new SlashCommandBuilder()
 		.setName('serverinfo')
 		.setDescription('Fetches and posts the server information.'),
@@ -125,7 +126,7 @@ module.exports = {
 					{ name: '✨ Animated Icon', value: animatedIcon, inline: true },
 					{ name: '🖼️ Server Banner', value: bannerOn, inline: true },
 				)
-				.setFooter({ text: `Requested by ${user.username}`, iconURL: user.displayAvatarURL() })
+				.setFooter({ text: `Requested by ${user.username}, The cache resets every 5 minutes`, iconURL: user.displayAvatarURL() })
 				.setTimestamp();
 
 			// Checking for banner :D
