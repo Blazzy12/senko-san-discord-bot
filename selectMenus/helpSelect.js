@@ -60,7 +60,7 @@ module.exports = {
 				title: '🎠 Fun System',
 				description: 'Entertainment and fun commands',
 				commands: [
-					`\`${prefix}mirage\` - Posts lx.mirage07 favourite gif!`,
+					'None currently, check back another time!',
 					'** All compatible with slash commands**',
 				],
 			},
