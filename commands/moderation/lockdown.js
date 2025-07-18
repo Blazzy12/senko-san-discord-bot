@@ -4,6 +4,7 @@ const { getGuildConfig } = require('../configuration/configuration.js');
 
 // Data storage, will eventually need to be replaced with sqlite3
 const lockdownChannels = new Map();
+const unlockingChannels = new Set(); // Track channels currently being unlocked
 
 // Store client reference for message handler
 let clientInstance = null;
@@ -20,6 +21,9 @@ function initializeStickyHandler(client) {
 	client.on('messageCreate', async (message) => {
 		// Ignore bot messages to prevent infinite loops
 		if (message.author.bot) return;
+
+		// Check if this channel is currently being unlocked
+		if (unlockingChannels.has(message.channel.id)) return;
 
 		// Check if this message was sent in a locked channel
 		if (lockdownChannels.has(message.channel.id)) {
@@ -289,8 +293,8 @@ module.exports = [
 			}
 
 			try {
-				// Remove the channel from lockdown tracking to prevent new sticky messages
-				lockdownChannels.delete(channel.id);
+				// Mark this channel as being unlocked to prevent sticky messages
+				unlockingChannels.add(channel.id);
 
 				// Delete the sticky message if it exists
 				if (lockInfo && lockInfo.messageId) {
@@ -303,7 +307,10 @@ module.exports = [
 					}
 				}
 
-				// THIRD: Reset channel permissions
+				// Remove the channel from lockdown tracking
+				lockdownChannels.delete(channel.id);
+
+				// Reset channel permissions
 				// First we're going to need to grab the everyone role
 				const everyoneRole = guild.roles.everyone;
 
@@ -357,12 +364,23 @@ module.exports = [
 				}
 
 				// Send the confirm response
-				return isSlashCommand
+				const result = isSlashCommand
 					? await interactionOrMessage.editReply({ embeds: [unlockedEmbed] })
 					: await interactionOrMessage.reply({ embeds: [unlockedEmbed] });
 
+				// Remove the unlocking flag after a short delay
+				setTimeout(() => {
+					unlockingChannels.delete(channel.id);
+				}, 1000);
+
+				return result;
+
 			} catch (error) {
 				console.error('There has been an error with the Unlock command:', error);
+
+				// Make sure to clean up the unlocking flag even on error
+				unlockingChannels.delete(channel.id);
+
 				const content = 'Uh-oh I do not feel good (error)';
 				return isSlashCommand
 					? await interactionOrMessage.editReply({ content })
