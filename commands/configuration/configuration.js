@@ -211,7 +211,7 @@ module.exports = [
 				const prefix = guildConfig.prefix;
 
 				if (!args || args.length < 1) {
-					return await message.reply(`Usage: \`${prefix}config <view|set|reset> [key] [value]\``);
+					return await message.reply(`Usage: \`${prefix}config <view|set|remove|reset> [key] [value]\``);
 				}
 
 				subcommand = args[0].toLowerCase();
