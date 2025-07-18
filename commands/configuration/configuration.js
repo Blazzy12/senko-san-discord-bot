@@ -19,16 +19,22 @@ const KEY_ALIASES = {
 	'warn': 'warn_log_channel_id',
 	'warning': 'warn_log_channel_id',
 	'warn_log': 'warn_log_channel_id',
+	'warn_log_channel_id': 'warn_log_channel_id',
 	'kick': 'kick_log_channel_id',
 	'kick_log': 'kick_log_channel_id',
+	'kick_log_channel_id': 'kick_log_channel_id',
 	'ban': 'ban_log_channel_id',
 	'ban_log': 'ban_log_channel_id',
+	'ban_log_channel_id': 'ban_log_channel_id',
 	'mute': 'mute_log_channel_id',
 	'mute_log': 'mute_log_channel_id',
+	'mute_log_channel_id': 'mute_log_channel_id',
 	'lockdown': 'lockdown_log_channel_id',
 	'lockdown_log': 'lockdown_log_channel_id',
+	'lockdown_log_channel_id': 'lockdown_log_channel_id',
 	'purge': 'purge_log_channel_id',
 	'purge_log': 'purge_log_channel_id',
+	'purge_log_channel_id': 'purge_log_channel_id',
 };
 
 // Init
