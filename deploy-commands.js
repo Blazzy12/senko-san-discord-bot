@@ -1,56 +1,47 @@
 const { REST, Routes } = require('discord.js');
-const { clientId, token } = require('./config.json'); // Removed guildId since we're deploying globally
+const { clientId, token } = require('./config.json');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('crypto');
 
 const commands = [];
-// Grab all the command folders from the commands directory you created earlier
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
+// Load all commands (same as your existing code)
 for (const folder of commandFolders) {
-	// Grab all the command files from the commands directory you created earlier
 	const commandsPath = path.join(foldersPath, folder);
 	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-	// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
 	for (const file of commandFiles) {
 		const filePath = path.join(commandsPath, file);
 
 		try {
 			const commandModule = require(filePath);
 
-			// Check if the module exports an array of commands
 			if (Array.isArray(commandModule)) {
 				for (const command of commandModule) {
 					if ('data' in command && 'execute' in command) {
-						// Additional check to ensure data has toJSON method
 						if (typeof command.data.toJSON === 'function') {
 							commands.push(command.data.toJSON());
 							console.log(`✅ Loaded command: ${command.data.name} from ${file}`);
 						} else {
-							console.log(`❌ [ERROR] Command in array at ${filePath} has invalid data structure. Data:`, command.data);
+							console.log(`❌ [ERROR] Command in array at ${filePath} has invalid data structure.`);
 						}
 					} else {
-						console.log(`⚠️  [WARNING] A command in array at ${filePath} is missing a required "data" or "execute" property.`);
+						console.log(`⚠️  [WARNING] A command in array at ${filePath} is missing required properties.`);
 					}
 				}
 			}
-			// Handle single command export (original behavior)
 			else if ('data' in commandModule && 'execute' in commandModule) {
-				// Additional check to ensure data has toJSON method
 				if (typeof commandModule.data.toJSON === 'function') {
 					commands.push(commandModule.data.toJSON());
 					console.log(`✅ Loaded command: ${commandModule.data.name} from ${file}`);
 				} else {
-					console.log(`❌ [ERROR] Command at ${filePath} has invalid data structure. Data:`, commandModule.data);
-					console.log(`❌ [ERROR] Expected SlashCommandBuilder instance, got:`, typeof commandModule.data);
+					console.log(`❌ [ERROR] Command at ${filePath} has invalid data structure.`);
 				}
 			} else {
-				console.log(`⚠️  [WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-				if (commandModule.data) {
-					console.log(`Data found but invalid:`, commandModule.data);
-				}
+				console.log(`⚠️  [WARNING] The command at ${filePath} is missing required properties.`);
 			}
 		} catch (error) {
 			console.log(`❌ [ERROR] Failed to load command from ${filePath}:`, error.message);
@@ -58,35 +49,52 @@ for (const folder of commandFolders) {
 	}
 }
 
-// Construct and prepare an instance of the REST module
 const rest = new REST().setToken(token);
 
-// and deploy your commands globally!
-(async () => {
+// Smart deployment function
+async function deployCommands() {
 	try {
-		console.log(`\n🗑️  Clearing all existing global commands...`);
+		// Create a hash of current commands to check for changes
+		const commandsString = JSON.stringify(commands.sort((a, b) => a.name.localeCompare(b.name)));
+		const currentHash = crypto.createHash('md5').update(commandsString).digest('hex');
 
-		// Clear all existing commands first
-		await rest.put(
-			Routes.applicationCommands(clientId),
-			{ body: [] },
-		);
+		// Check if we have a stored hash
+		const hashFile = path.join(__dirname, '.commands-hash');
+		let storedHash = '';
 
-		console.log(`✅ Successfully cleared all existing global commands.`);
+		if (fs.existsSync(hashFile)) {
+			storedHash = fs.readFileSync(hashFile, 'utf8');
+		}
 
-		console.log(`\n🌍 Started refreshing ${commands.length} global application (/) commands.`);
-		console.log(`⚠️  Note: Global commands can take up to 1 hour to propagate across all Discord servers.`);
+		// If hashes match, no need to deploy
+		if (currentHash === storedHash) {
+			console.log(`✅ Commands are up to date. Skipping deployment.`);
+			return;
+		}
 
-		// The put method is used to fully refresh all global commands
+		console.log(`🔄 Commands have changed. Deploying ${commands.length} global commands...`);
+		console.log(`⚠️  Note: Global commands can take up to 1 hour to propagate.`);
+
+		// Deploy commands
 		const data = await rest.put(
-			Routes.applicationCommands(clientId), // Changed from applicationGuildCommands to applicationCommands
+			Routes.applicationCommands(clientId),
 			{ body: commands },
 		);
 
-		console.log(`✅ Successfully reloaded ${data.length} global application (/) commands.`);
-		console.log(`🕐 Commands will be available globally within 1 hour.`);
+		console.log(`✅ Successfully deployed ${data.length} global commands.`);
+
+		// Save the new hash
+		fs.writeFileSync(hashFile, currentHash);
+
 	} catch (error) {
-		// And of course, make sure you catch and log any errors!
 		console.error('❌ [DEPLOY ERROR]', error);
 	}
-})();
+}
+
+// Export the function for use in index.js
+module.exports = { deployCommands };
+
+// If run directly, deploy immediately
+if (require.main === module) {
+	deployCommands();
+}
