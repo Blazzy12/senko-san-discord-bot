@@ -2,6 +2,11 @@
 
 A Discord bot built with Node.js and Discord.js.
 
+Dynamic Commands
+Dynamic Command Deployment
+Dynamic Database
+Dynamic Configuration
+
 ## 📋 Prerequisites
 
 - [Node.js](https://nodejs.org/) (LTS version recommended)
