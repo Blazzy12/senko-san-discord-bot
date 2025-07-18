@@ -14,7 +14,7 @@ function getLockedChannels() {
 	return lockdownChannels;
 }
 
-// Initialize the sticky message handler
+// Initialize the sticky message handler with better safeguards
 function initializeStickyHandler(client) {
 	clientInstance = client;
 
@@ -23,10 +23,21 @@ function initializeStickyHandler(client) {
 		if (message.author.bot) return;
 
 		// Check if this channel is currently being unlocked
-		if (unlockingChannels.has(message.channel.id)) return;
+		if (unlockingChannels.has(message.channel.id)) {
+			console.log(`Skipping sticky message for channel ${message.channel.id} - currently unlocking`);
+			return;
+		}
 
 		// Check if this message was sent in a locked channel
 		if (lockdownChannels.has(message.channel.id)) {
+			console.log(`Processing sticky message for locked channel ${message.channel.id}`);
+
+			// Double-check that we're not in the middle of unlocking
+			if (unlockingChannels.has(message.channel.id)) {
+				console.log(`Aborting sticky message - channel ${message.channel.id} is unlocking`);
+				return;
+			}
+
 			const lockInfo = lockdownChannels.get(message.channel.id);
 
 			try {
@@ -35,10 +46,17 @@ function initializeStickyHandler(client) {
 					try {
 						const oldStickyMessage = await message.channel.messages.fetch(lockInfo.messageId);
 						await oldStickyMessage.delete();
+						console.log('Old sticky message deleted');
 					} catch (error) {
 						// Old message might already be deleted, that's okay
 						console.log('Old sticky message not found or already deleted');
 					}
+				}
+
+				// Final check before creating new sticky message
+				if (unlockingChannels.has(message.channel.id)) {
+					console.log(`Aborting sticky message creation - channel ${message.channel.id} is unlocking`);
+					return;
 				}
 
 				// Send new sticky message
@@ -54,9 +72,20 @@ function initializeStickyHandler(client) {
 					}],
 				});
 
-				// Update the stored message ID
-				lockInfo.messageId = newStickyMessage.id;
-				lockdownChannels.set(message.channel.id, lockInfo);
+				// Update the stored message ID only if we're still locked
+				if (lockdownChannels.has(message.channel.id)) {
+					lockInfo.messageId = newStickyMessage.id;
+					lockdownChannels.set(message.channel.id, lockInfo);
+					console.log(`New sticky message created with ID: ${newStickyMessage.id}`);
+				} else {
+					// If we're no longer locked, delete the message we just created
+					try {
+						await newStickyMessage.delete();
+						console.log('Deleted sticky message as channel is no longer locked');
+					} catch (error) {
+						console.error('Error deleting unnecessary sticky message:', error);
+					}
+				}
 
 			} catch (error) {
 				console.error('Error handling sticky message:', error);
@@ -287,16 +316,12 @@ module.exports = [
 			const lockInfo = lockdownChannels.get(channel.id);
 			const allowedRoles = lockInfo ? lockInfo.allowedRoles : [];
 
-			// Defer the reply to prevent timeout
-			if (isSlashCommand) {
-				await interactionOrMessage.deferReply({ ephemeral: false });
-			}
-
 			try {
-				// Mark this channel as being unlocked to prevent sticky messages
+				// IMMEDIATELY mark this channel as being unlocked to prevent sticky messages
 				unlockingChannels.add(channel.id);
+				console.log(`Channel ${channel.id} marked as unlocking`);
 
-				// Delete the sticky message if it exists
+				// Delete the sticky message if it exists BEFORE deferring
 				if (lockInfo && lockInfo.messageId) {
 					try {
 						const stickyMessage = await channel.messages.fetch(lockInfo.messageId);
@@ -309,9 +334,14 @@ module.exports = [
 
 				// Remove the channel from lockdown tracking
 				lockdownChannels.delete(channel.id);
+				console.log(`Channel ${channel.id} removed from lockdown tracking`);
+
+				// Now defer the reply (this prevents the deferred message from triggering sticky)
+				if (isSlashCommand) {
+					await interactionOrMessage.deferReply({ ephemeral: false });
+				}
 
 				// Reset channel permissions
-				// First we're going to need to grab the everyone role
 				const everyoneRole = guild.roles.everyone;
 
 				// Remove the permissions to send messages (reset to default)
@@ -319,11 +349,9 @@ module.exports = [
 					SendMessages: null,
 				});
 
-				// Now we need to make sure the users that have permission are reset to default
+				// Reset role permissions to default
 				for (const roleId of allowedRoles) {
-					// Grab the role IDs
 					const role = guild.roles.cache.get(roleId);
-					// Reset their permissions to default
 					if (role) {
 						await channel.permissionOverwrites.edit(role, {
 							SendMessages: null,
@@ -331,7 +359,9 @@ module.exports = [
 					}
 				}
 
-				// Log embed
+				console.log(`Channel ${channel.id} permissions reset`);
+
+				// Create and send the unlock embed
 				const unlockedEmbed = new EmbedBuilder()
 					.setTitle('🔓 Channel Unlocked')
 					.setColor(0x00ff00)
@@ -343,11 +373,10 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `Channel ID: ${channel.id}` });
 
-				// Get config
+				// Send to log channel
 				const guildConfig = getGuildConfig(guild.id);
 				const LogChannelId = guildConfig.lockdown_log_channel_id;
 
-				// Send to configured logs
 				if (LogChannelId) {
 					const logChannel = guild.channels.cache.get(LogChannelId);
 					if (logChannel && logChannel.isTextBased()) {
@@ -356,11 +385,7 @@ module.exports = [
 						} catch (logError) {
 							console.error('Error sending log to log channel:', logError);
 						}
-					} else {
-						console.warn('Configured log channel not found or is not a text channel.');
 					}
-				} else {
-					console.log('No log channel configured for this guild.');
 				}
 
 				// Send the confirm response
@@ -368,10 +393,11 @@ module.exports = [
 					? await interactionOrMessage.editReply({ embeds: [unlockedEmbed] })
 					: await interactionOrMessage.reply({ embeds: [unlockedEmbed] });
 
-				// Remove the unlocking flag after a short delay
+				// Remove the unlocking flag after a longer delay to be extra safe
 				setTimeout(() => {
 					unlockingChannels.delete(channel.id);
-				}, 1000);
+					console.log(`Channel ${channel.id} unmarked as unlocking`);
+				}, 2000); // 2 second delay
 
 				return result;
 
