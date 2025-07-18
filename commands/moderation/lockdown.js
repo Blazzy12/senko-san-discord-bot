@@ -254,6 +254,7 @@ module.exports = [
 				member = message.member;
 				user = message.author;
 			}
+
 			// Checks if user has permissions
 			if (!member.permissions.has(PermissionFlagsBits.ManageMessages)) {
 				const content = 'Senko says you do not have permission to run this command nya~';
@@ -288,10 +289,25 @@ module.exports = [
 			}
 
 			try {
+				// Remove the channel from lockdown tracking to prevent new sticky messages
+				lockdownChannels.delete(channel.id);
+
+				// Delete the sticky message if it exists
+				if (lockInfo && lockInfo.messageId) {
+					try {
+						const stickyMessage = await channel.messages.fetch(lockInfo.messageId);
+						await stickyMessage.delete();
+						console.log('Sticky message deleted successfully');
+					} catch (error) {
+						console.log('Sticky message already deleted or not found:', error.message);
+					}
+				}
+
+				// THIRD: Reset channel permissions
 				// First we're going to need to grab the everyone role
 				const everyoneRole = guild.roles.everyone;
 
-				// Remove the permissions to send messages
+				// Remove the permissions to send messages (reset to default)
 				await channel.permissionOverwrites.edit(everyoneRole, {
 					SendMessages: null,
 				});
@@ -300,22 +316,12 @@ module.exports = [
 				for (const roleId of allowedRoles) {
 					// Grab the role IDs
 					const role = guild.roles.cache.get(roleId);
-					// Make sure they can message
+					// Reset their permissions to default
 					if (role) {
 						await channel.permissionOverwrites.edit(role, {
 							SendMessages: null,
 						});
 					}
-				}
-
-				if (lockInfo) {
-					try {
-						const stickyMessage = await channel.messages.fetch(lockInfo.messageId);
-						await stickyMessage.delete();
-					} catch (error) {
-						console.log('Sticky message already deleted or not found');
-					}
-					lockdownChannels.delete(channel.id);
 				}
 
 				// Log embed
