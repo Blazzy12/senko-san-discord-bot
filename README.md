@@ -26,6 +26,7 @@ A Discord bot built with Node.js and Discord.js.
    - Fill in your bot configuration:
     ```json
     {
+        "development": true, // Will use instant deployment and not global
         "token": "Bot-Token",
         "clientId": "Application-Id",
         "guildId": "Guild-Id"
@@ -71,6 +72,7 @@ npm install --save-dev eslint @eslint/js
 ├─ commands
 │  ├─ configuration
 │  │  └─ configuration.js
+│  ├─ fun
 │  ├─ moderation
 │  │  ├─ ban.js
 │  │  ├─ jwarnsystem.js
@@ -80,9 +82,9 @@ npm install --save-dev eslint @eslint/js
 │  │  ├─ purge.js
 │  │  └─ warnsystem.js
 │  └─ utility
-│     ├─ mirage.js
+│     ├─ avatar.js
 │     ├─ ping.js
-│     ├─ rulesembed.js
+│     ├─ help.js
 │     └─ serverinfo.js
 ├─ config.json.template
 ├─ deploy-commands.js
@@ -90,7 +92,8 @@ npm install --save-dev eslint @eslint/js
 ├─ events
 │  ├─ interactionCreate.js
 │  ├─ messageCreate.js
-│  └─ ready.js
+│  ├─ ready.js
+│  └─ selectCreate.js
 ├─ index.js
 └─ package.json
 ```
