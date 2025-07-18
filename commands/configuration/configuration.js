@@ -14,6 +14,21 @@ const VALID_CONFIG_KEYS = [
 	'lockdown_allowed_roles',
 ];
 
+// Database schema definition - add new columns here
+const SCHEMA_DEFINITION = {
+	guild_id: { type: 'TEXT', primaryKey: true },
+	prefix: { type: 'TEXT', defaultValue: ',' },
+	warn_log_channel_id: { type: 'TEXT', defaultValue: null },
+	kick_log_channel_id: { type: 'TEXT', defaultValue: null },
+	ban_log_channel_id: { type: 'TEXT', defaultValue: null },
+	mute_log_channel_id: { type: 'TEXT', defaultValue: null },
+	lockdown_log_channel_id: { type: 'TEXT', defaultValue: null },
+	purge_log_channel_id: { type: 'TEXT', defaultValue: null },
+	lockdown_allowed_roles: { type: 'TEXT', defaultValue: null },
+	// Add new columns here in the future:
+	// new_column_name: { type: 'TEXT', defaultValue: null },
+};
+
 // Create a mapping for user-friendly names to actual keys
 const KEY_ALIASES = {
 	'prefix': 'prefix',
@@ -44,48 +59,122 @@ const KEY_ALIASES = {
 const databasePath = path.join(__dirname, 'guild_config.db');
 const configDB = new Database(databasePath);
 
-// Create table
-configDB.exec(`CREATE TABLE IF NOT EXISTS guild_config (
-	guild_id TEXT PRIMARY KEY,
-	prefix TEXT DEFAULT ',',
-	warn_log_channel_id TEXT,
-	kick_log_channel_id TEXT,
-	ban_log_channel_id TEXT,
-	mute_log_channel_id TEXT,
-	lockdown_log_channel_id TEXT,
-	purge_log_channel_id TEXT,
-	lockdown_allowed_roles TEXT
-)`);
+// Dynamic migration system
+function getExistingColumns() {
+	try {
+		const tableInfo = configDB.pragma('table_info(guild_config)');
+		return tableInfo.map(col => col.name);
+	} catch (error) {
+		// Table doesn't exist yet
+		return [];
+	}
+}
 
-// Index
+function createTableWithSchema() {
+	const columns = Object.entries(SCHEMA_DEFINITION).map(([columnName, config]) => {
+		let columnDef = `${columnName} ${config.type}`;
+
+		if (config.primaryKey) {
+			columnDef += ' PRIMARY KEY';
+		}
+
+		if (config.defaultValue !== null && config.defaultValue !== undefined) {
+			columnDef += ` DEFAULT '${config.defaultValue}'`;
+		}
+
+		return columnDef;
+	});
+
+	const createTableSQL = `CREATE TABLE IF NOT EXISTS guild_config (
+		${columns.join(',\n\t\t')}
+	)`;
+
+	console.log('Creating/updating guild_config table...');
+	configDB.exec(createTableSQL);
+}
+
+function runMigrations() {
+	const existingColumns = getExistingColumns();
+
+	// If table doesn't exist, create it
+	if (existingColumns.length === 0) {
+		createTableWithSchema();
+		console.log('Created guild_config table with all columns.');
+		return;
+	}
+
+	// Check for missing columns and add them
+	const missingColumns = Object.keys(SCHEMA_DEFINITION).filter(
+		columnName => !existingColumns.includes(columnName)
+	);
+
+	if (missingColumns.length > 0) {
+		console.log(`Found ${missingColumns.length} missing columns. Adding them...`);
+
+		missingColumns.forEach(columnName => {
+			const config = SCHEMA_DEFINITION[columnName];
+			let alterSQL = `ALTER TABLE guild_config ADD COLUMN ${columnName} ${config.type}`;
+
+			if (config.defaultValue !== null && config.defaultValue !== undefined) {
+				alterSQL += ` DEFAULT '${config.defaultValue}'`;
+			}
+
+			try {
+				configDB.exec(alterSQL);
+				console.log(`✅ Added column: ${columnName}`);
+			} catch (error) {
+				console.error(`❌ Failed to add column ${columnName}:`, error.message);
+			}
+		});
+
+		console.log('Migration completed successfully!');
+	} else {
+		console.log('Database schema is up to date.');
+	}
+}
+
+// Run migrations
+runMigrations();
+
+// Create index
 configDB.exec(`CREATE INDEX IF NOT EXISTS idx_guild_config_guild_id ON guild_config(guild_id)`);
 
-// Prepare statements for better performace
-const configStatements = {
-	getGuildConfig: configDB.prepare('SELECT * FROM guild_config WHERE guild_id = ?'),
-	setGuildConfig: configDB.prepare(`
-		INSERT OR REPLACE INTO guild_config
-		(guild_id, prefix, warn_log_channel_id, kick_log_channel_id, ban_log_channel_id, mute_log_channel_id, lockdown_log_channel_id, purge_log_channel_id, lockdown_allowed_roles)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`),
-	resetGuildConfig: configDB.prepare('DELETE FROM guild_config WHERE guild_id = ?'),
-};
+// Generate prepared statements dynamically
+function generatePreparedStatements() {
+	const columnNames = Object.keys(SCHEMA_DEFINITION);
+	const placeholders = columnNames.map(() => '?').join(', ');
 
-// Default Configuration
-const defaultConfig = {
-	prefix: ',',
-	warn_log_channel_id: null,
-	kick_log_channel_id: null,
-	ban_log_channel_id: null,
-	mute_log_channel_id: null,
-	lockdown_log_channel_id: null,
-	purge_log_channel_id: null,
-	lockdown_allowed_roles: null,
-};
+	return {
+		getGuildConfig: configDB.prepare('SELECT * FROM guild_config WHERE guild_id = ?'),
+		setGuildConfig: configDB.prepare(`
+			INSERT OR REPLACE INTO guild_config
+			(${columnNames.join(', ')})
+			VALUES (${placeholders})
+		`),
+		resetGuildConfig: configDB.prepare('DELETE FROM guild_config WHERE guild_id = ?'),
+	};
+}
+
+// Prepare statements for better performance
+const configStatements = generatePreparedStatements();
+
+// Generate default configuration dynamically
+function generateDefaultConfig() {
+	const defaultConfig = {};
+
+	Object.entries(SCHEMA_DEFINITION).forEach(([columnName, config]) => {
+		if (columnName !== 'guild_id') {
+			defaultConfig[columnName] = config.defaultValue;
+		}
+	});
+
+	return defaultConfig;
+}
+
+const defaultConfig = generateDefaultConfig();
 
 // Configuration helper functions
 function getGuildConfig(guildId) {
-
 	const config = configStatements.getGuildConfig.get(guildId);
 
 	if (!config) {
@@ -96,44 +185,24 @@ function getGuildConfig(guildId) {
 }
 
 function setConfigValue(guildId, key, value) {
-	 const currentConfig = getGuildConfig(guildId);
+	const currentConfig = getGuildConfig(guildId);
 
 	// Create config object with current values
-	const configUpdate = {
-		guild_id: guildId,
-		prefix: currentConfig.prefix,
-		warn_log_channel_id: currentConfig.warn_log_channel_id,
-		kick_log_channel_id: currentConfig.kick_log_channel_id,
-		ban_log_channel_id: currentConfig.ban_log_channel_id,
-		mute_log_channel_id: currentConfig.mute_log_channel_id,
-		lockdown_log_channel_id: currentConfig.lockdown_log_channel_id,
-		purge_log_channel_id: currentConfig.purge_log_channel_id,
-		lockdown_allowed_roles: currentConfig.lockdown_allowed_roles,
-	};
-
-	// Update the specific key
+	const configUpdate = { ...currentConfig };
+	configUpdate.guild_id = guildId;
 	configUpdate[key] = value;
 
-	configStatements.setGuildConfig.run(
-		configUpdate.guild_id,
-		configUpdate.prefix,
-		configUpdate.warn_log_channel_id,
-		configUpdate.kick_log_channel_id,
-		configUpdate.ban_log_channel_id,
-		configUpdate.mute_log_channel_id,
-		configUpdate.lockdown_log_channel_id,
-		configUpdate.purge_log_channel_id,
-		configUpdate.lockdown_allowed_roles,
-	);
+	// Get column order from schema definition
+	const columnNames = Object.keys(SCHEMA_DEFINITION);
+	const orderedValues = columnNames.map(columnName => configUpdate[columnName]);
 
+	configStatements.setGuildConfig.run(...orderedValues);
 	return true;
 }
 
 function resetGuildConfig(guildId) {
-
 	configStatements.resetGuildConfig.run(guildId);
 	return true;
-
 }
 
 // Commands
@@ -166,6 +235,7 @@ module.exports = [
 								{ name: 'Mute Log Channel', value: 'mute_log_channel_id' },
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
+								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
 							),
 					)
 					.addStringOption(option =>
@@ -189,6 +259,7 @@ module.exports = [
 								{ name: 'Mute Log Channel', value: 'mute_log_channel_id' },
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
+								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
 							),
 					),
 			)
@@ -301,7 +372,7 @@ module.exports = [
 async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
 
-	// Prase lockdown roles
+	// Parse lockdown roles
 	let lockdownDisplay = '`Not set (lockdown_allowed_roles)`';
 	if (config.lockdown_allowed_roles) {
 		try {
@@ -385,7 +456,7 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 		processedValue = channelMatch[1];
 		break;
 	case 'lockdown_allowed_roles':
-		// Prase mention and ids
+		// Parse mention and ids
 		const roleMentions = value.match(/<@&(\d+)>/g) || [];
 		const roleIds = value.match(/\b\d{17,19}\b/g) || [];
 
