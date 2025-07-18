@@ -158,7 +158,25 @@ module.exports = [
 					.addStringOption(option =>
 						option.setName('value')
 							.setDescription('New value for this configuration')
+							.setRequired(true),
+					),
+			)
+			.addSubcommand(subcommand =>
+				subcommand
+					.setName('remove')
+					.setDescription('Configuration key to remove')
+					.addStringOption(option =>
+						option.setName('key')
+							.setDescription('Configuration key to set')
 							.setRequired(true)
+							.addChoices(
+								{ name: 'Warning Log Channel', value: 'warn_log_channel_id' },
+								{ name: 'Kick Log Channel', value: 'kick_log_channel_id' },
+								{ name: 'Ban Log Channel', value: 'ban_log_channel_id' },
+								{ name: 'Mute Log Channel', value: 'mute_log_channel_id' },
+								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
+								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
+							),
 					),
 			)
 			.addSubcommand(subcommand =>
@@ -201,9 +219,12 @@ module.exports = [
 				value = args.slice(2).join(' ');
 
 				// Validate key for text commands (only for 'set' subcommand)
-				if (subcommand === 'set') {
+				if (subcommand === 'set' || subcommand === 'remove') {
 					if (!key) {
-						return await message.reply('Please provide a configuration key to set.\n\nValid keys: `prefix`, `warn`, `kick`, `ban`, `mute`, `lockdown`, `purge`');
+						const validKeys = subcommand === 'set' 
+							? Object.keys(KEY_ALIASES).join('`, `')
+							: Object.keys(KEY_ALIASES).filter(k => k !== 'prefix').join('`, `');
+						return await message.reply(`Please provide a configuration key to ${subcommand}.\n\nValid keys: \`${validKeys}\``);
 					}
 
 					// Normalize the key using aliases
@@ -212,10 +233,14 @@ module.exports = [
 						return await message.reply(`Invalid configuration key: \`${key}\`\n\nValid keys: \`${Object.keys(KEY_ALIASES).join('`, `')}\``);
 					}
 
+					if (subcommand === 'remove' && normalizedKey === 'prefix') {
+						return await message.reply('Sorry, to reset the prefix you\'re going to have to reset the whole config. You do that via `reset`.');
+					}
+
 					// Update key to the normalized version
 					key = normalizedKey;
 
-					if (!value) {
+					if (subcommand === 'set' && !value) {
 						return await message.reply('Please provide a value to set for this configuration key.');
 					}
 				}
@@ -236,6 +261,9 @@ module.exports = [
 					break;
 				case 'set':
 					await handleSetConfig(interactionOrMessage, guild, key, value, isSlashCommand);
+					break;
+				case 'remove':
+					await handleRemoveConfig(interactionOrMessage, guild, key, isSlashCommand);
 					break;
 				case 'reset':
 					await handleResetConfig(interactionOrMessage, guild, isSlashCommand);
@@ -347,6 +375,60 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 		)
 		.setTimestamp()
 		.setFooter({ text: `Updated by ${interactionOrMessage.user?.username || interactionOrMessage.author.username}` });
+
+	return isSlashCommand
+		? await interactionOrMessage.reply({ embeds: [embed] })
+		: await interactionOrMessage.reply({ embeds: [embed] });
+}
+
+async function handleRemoveConfig(interactionOrMessage, guild, key, isSlashCommand) {
+	if (!key) {
+		const content = 'Please provide a configuration key to remove.';
+		return isSlashCommand
+			? await interactionOrMessage.reply({ content, ephemeral: true })
+			: await interactionOrMessage.reply(content);
+	}
+
+	// For text commands, normalize the key using aliases
+	let normalizedKey = key;
+	if (!isSlashCommand) {
+		normalizedKey = KEY_ALIASES[key.toLowerCase()];
+		if (!normalizedKey) {
+			const validKeys = Object.keys(KEY_ALIASES).filter(k => k !== 'prefix').join('`, `');
+			const content = `Invalid configuration key: \`${key}\`\n\nValid keys: \`${validKeys}\``;
+			return await interactionOrMessage.reply(content);
+		}
+	}
+
+	// Don't allow removing prefix
+	if (normalizedKey === 'prefix') {
+		const content = 'Sorry, to reset the prefix you\'re going to have to reset the whole config. You do that via `reset`.';
+		return isSlashCommand
+			? await interactionOrMessage.reply({ content, ephemeral: true })
+			: await interactionOrMessage.reply(content);
+	}
+
+	// Validate key exists in valid config keys
+	if (!VALID_CONFIG_KEYS.includes(normalizedKey)) {
+		const content = 'Invalid configuration key.';
+		return isSlashCommand
+			? await interactionOrMessage.reply({ content, ephemeral: true })
+			: await interactionOrMessage.reply(content);
+	}
+
+	// Set the value to null (default)
+	setConfigValue(guild.id, normalizedKey, null);
+
+	// Success embed
+	const embed = new EmbedBuilder()
+		.setColor(0xff9900)
+		.setTitle(`🗑️ Configuration Removed - ${guild.name}`)
+		.addFields(
+			{ name: 'Key', value: `\`${normalizedKey}\``, inline: true },
+			{ name: 'Status', value: '`Reset to default (null)`', inline: true },
+		)
+		.setTimestamp()
+		.setFooter({ text: `Removed by ${interactionOrMessage.user?.username || interactionOrMessage.author.username}` });
 
 	return isSlashCommand
 		? await interactionOrMessage.reply({ embeds: [embed] })
