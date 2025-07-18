@@ -11,6 +11,7 @@ const VALID_CONFIG_KEYS = [
 	'mute_log_channel_id',
 	'lockdown_log_channel_id',
 	'purge_log_channel_id',
+	'lockdown_allowed_roles',
 ];
 
 // Create a mapping for user-friendly names to actual keys
@@ -35,6 +36,8 @@ const KEY_ALIASES = {
 	'purge': 'purge_log_channel_id',
 	'purge_log': 'purge_log_channel_id',
 	'purge_log_channel_id': 'purge_log_channel_id',
+	'lockdown_roles': 'lockdown_allowed_roles',
+	'lockdown_allowed_roles': 'lockdown_allowed_roles',
 };
 
 // Init
@@ -50,7 +53,8 @@ configDB.exec(`CREATE TABLE IF NOT EXISTS guild_config (
 	ban_log_channel_id TEXT,
 	mute_log_channel_id TEXT,
 	lockdown_log_channel_id TEXT,
-	purge_log_channel_id TEXT
+	purge_log_channel_id TEXT,
+	lockdown_allowed_roles TEXT
 )`);
 
 // Index
@@ -61,8 +65,8 @@ const configStatements = {
 	getGuildConfig: configDB.prepare('SELECT * FROM guild_config WHERE guild_id = ?'),
 	setGuildConfig: configDB.prepare(`
 		INSERT OR REPLACE INTO guild_config
-		(guild_id, prefix, warn_log_channel_id, kick_log_channel_id, ban_log_channel_id, mute_log_channel_id, lockdown_log_channel_id, purge_log_channel_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		(guild_id, prefix, warn_log_channel_id, kick_log_channel_id, ban_log_channel_id, mute_log_channel_id, lockdown_log_channel_id, purge_log_channel_id, lockdown_allowed_roles)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`),
 	resetGuildConfig: configDB.prepare('DELETE FROM guild_config WHERE guild_id = ?'),
 };
@@ -76,6 +80,7 @@ const defaultConfig = {
 	mute_log_channel_id: null,
 	lockdown_log_channel_id: null,
 	purge_log_channel_id: null,
+	lockdown_allowed_roles: null,
 };
 
 // Configuration helper functions
@@ -84,7 +89,7 @@ function getGuildConfig(guildId) {
 	const config = configStatements.getGuildConfig.get(guildId);
 
 	if (!config) {
-		return { ...defaultConfig, guild_id: guildId};
+		return { ...defaultConfig, guild_id: guildId };
 	}
 
 	return config;
@@ -102,7 +107,8 @@ function setConfigValue(guildId, key, value) {
 		ban_log_channel_id: currentConfig.ban_log_channel_id,
 		mute_log_channel_id: currentConfig.mute_log_channel_id,
 		lockdown_log_channel_id: currentConfig.lockdown_log_channel_id,
-		purge_log_channel_id: currentConfig.purge_log_channel_id
+		purge_log_channel_id: currentConfig.purge_log_channel_id,
+		lockdown_allowed_roles: currentConfig.lockdown_allowed_roles,
 	};
 
 	// Update the specific key
@@ -116,7 +122,8 @@ function setConfigValue(guildId, key, value) {
 		configUpdate.ban_log_channel_id,
 		configUpdate.mute_log_channel_id,
 		configUpdate.lockdown_log_channel_id,
-		configUpdate.purge_log_channel_id
+		configUpdate.purge_log_channel_id,
+		configUpdate.lockdown_allowed_roles,
 	);
 
 	return true;
@@ -294,6 +301,21 @@ module.exports = [
 async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
 
+	// Prase lockdown roles
+	let lockdownDisplay = '`Not set (lockdown_allowed_roles)`';
+	if (config.lockdown_allowed_roles) {
+		try {
+			const roleIds = JSON.parse(config.lockdown_allowed_roles);
+			const roleNames = roleIds.map(roleId => {
+				const role = guild.roles.cache.get(roleId);
+				return role ? `<@&${roleId}>` : `Unknown Role (${roleId})`;
+			});
+			lockdownDisplay = roleNames.join(', ');
+		} catch (error) {
+			lockdownDisplay = '`Invalid role data`';
+		}
+	}
+
 	const embed = new EmbedBuilder()
 		.setColor(0x0099ff)
 		.setTitle(`⚙️ Server Configuration - ${guild.name}`)
@@ -306,6 +328,7 @@ async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 			{ name: '🔇 Mute Log Channel', value: config.mute_log_channel_id ? `<#${config.mute_log_channel_id}>` : '`Not set (mute_log_channel_id)`', inline: true },
 			{ name: '🔒 Lockdown Log Channel', value: config.lockdown_log_channel_id ? `<#${config.lockdown_log_channel_id}>` : '`Not set (lockdown_log_channel_id)`', inline: true },
 			{ name: '🗡️ Purge Log Channel', value: config.purge_log_channel_id ? `<#${config.purge_log_channel_id}>` : '`Not set (purge_log_channel_id)`', inline: true },
+			{ name: '🔐 Lockdown Allowed Roles', value: lockdownDisplay, inline: false },
 		)
 		.setTimestamp()
 		.setFooter({ text: `Server ID: ${guild.id}` });
@@ -361,6 +384,42 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 
 		processedValue = channelMatch[1];
 		break;
+	case 'lockdown_allowed_roles':
+		// Prase mention and ids
+		const roleMentions = value.match(/<@&(\d+)>/g) || [];
+		const roleIds = value.match(/\b\d{17,19}\b/g) || [];
+
+		// Combine
+		const allRoleIds = [...new Set([
+			...roleMentions.map(mention => mention.match(/\d+/)[0]),
+			...roleIds,
+		])];
+
+		if (allRoleIds.length === 0) {
+			const content = 'Please provide valid role mentions (@role) or role IDs separated by spaces.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		// Validate
+		const invalidRoles = [];
+		for (const roleId of allRoleIds) {
+			const role = guild.roles.cache.get(roleId);
+			if (!role) {
+				invalidRoles.push(roleId);
+			}
+		}
+
+		if (invalidRoles.length > 0) {
+			const content = `The following role IDs were not found: ${invalidRoles.join(', ')}`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		processedValue = JSON.stringify(allRoleIds);
+		break;
 	default:
 		const content = 'Invalid configuration key.';
 		return isSlashCommand
@@ -371,13 +430,27 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 	// Set configuration value
 	setConfigValue(guild.id, key, processedValue);
 
+	let displayValue = processedValue;
+	if (key === 'lockdown_allowed_roles') {
+		try {
+			const roleIds = JSON.parse(processedValue);
+			const roleNames = roleIds.map(roleId => {
+				const role = guild.roles.cache.get(roleId);
+				return role ? `@${role.name}` : `Unknown Role (${roleId})`;
+			});
+			displayValue = roleNames.join(', ');
+		} catch (error) {
+			displayValue = 'Invalid role data';
+		}
+	}
+
 	// Success embed
 	const embed = new EmbedBuilder()
 		.setColor(0x00ff00)
 		.setTitle(`✅ Configuration Updated - ${guild.name}`)
 		.addFields(
     		{ name: 'Key', value: `\`${key}\``, inline: true },
-			{ name: 'New Value', value: typeof processedValue === 'string' && processedValue.length > 50 ? `\`${processedValue.substring(0, 50)}...\`` : `\`${processedValue}\``, inline: true },
+			{ name: 'New Value', value: typeof displayValue === 'string' && displayValue.length > 50 ? `\`${displayValue.substring(0, 50)}...\`` : `\`${displayValue}\``, inline: true },
 		)
 		.setTimestamp()
 		.setFooter({ text: `Updated by ${interactionOrMessage.user?.username || interactionOrMessage.author.username}` });

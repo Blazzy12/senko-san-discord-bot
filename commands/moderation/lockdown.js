@@ -2,8 +2,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const { getGuildConfig } = require('../configuration/configuration.js');
 
-const ALLOWED_ROLES = ['1333691633551540275', '1361410527389286550', '1388259374111264791', '1360309600825639153', '1333769686583611392', '1382920873362722896', '1388335848138739893'];
-
 // Data storage, will eventually need to be replaced with sqlite3
 const lockdownChannels = new Map();
 
@@ -116,6 +114,28 @@ module.exports = [
 					: await interactionOrMessage.reply(content);
 			}
 
+			// Get guild configuration to retrieve allowed roles
+			const guildConfig = getGuildConfig(guild.id);
+			let allowedRoles = [];
+
+			// Parse the allowed roles from configuration
+			if (guildConfig.lockdown_allowed_roles) {
+				try {
+					allowedRoles = JSON.parse(guildConfig.lockdown_allowed_roles);
+				} catch (error) {
+					console.error('Error parsing lockdown_allowed_roles:', error);
+					const content = 'Error: Invalid lockdown roles configuration. Please check your server configuration.';
+					return isSlashCommand
+						? await interactionOrMessage.reply({ content, ephemeral: true })
+						: await interactionOrMessage.reply(content);
+				}
+			}
+
+			// If no roles are configured, we'll still allow locking (just removes @everyone permissions)
+			if (!allowedRoles || allowedRoles.length === 0) {
+				console.log(`No lockdown allowed roles configured for guild ${guild.id}. Locking will only remove @everyone permissions.`);
+			}
+
 			// Defer the reply to prevent timeout
 			if (isSlashCommand) {
 				await interactionOrMessage.deferReply({ ephemeral: true });
@@ -131,7 +151,7 @@ module.exports = [
 				});
 
 				// Now we need to make sure the users that have permission can still message
-				for (const roleId of ALLOWED_ROLES) {
+				for (const roleId of allowedRoles) {
 					// Grab the role IDs
 					const role = guild.roles.cache.get(roleId);
 					// Make sure they can message
@@ -158,7 +178,7 @@ module.exports = [
 				// Store the info, will need to be updated to sqlite3 at a later date
 				lockdownChannels.set(channel.id, {
 					messageId: lockMessage.id,
-					allowedRoles: ALLOWED_ROLES,
+					allowedRoles: allowedRoles,
 				});
 
 				// Log embed
@@ -173,8 +193,7 @@ module.exports = [
 					.setTimestamp()
 					.setFooter({ text: `Channel ID: ${channel.id}` });
 
-				// Get config
-				const guildConfig = getGuildConfig(guild.id);
+				// Get log channel ID from config
 				const LogChannelId = guildConfig.lockdown_log_channel_id;
 
 				// Send to configured logs
@@ -259,6 +278,10 @@ module.exports = [
 					: await interactionOrMessage.reply(content);
 			}
 
+			// Get the stored lock info to retrieve the allowed roles that were used
+			const lockInfo = lockdownChannels.get(channel.id);
+			const allowedRoles = lockInfo ? lockInfo.allowedRoles : [];
+
 			// Defer the reply to prevent timeout
 			if (isSlashCommand) {
 				await interactionOrMessage.deferReply({ ephemeral: false });
@@ -274,7 +297,7 @@ module.exports = [
 				});
 
 				// Now we need to make sure the users that have permission are reset to default
-				for (const roleId of ALLOWED_ROLES) {
+				for (const roleId of allowedRoles) {
 					// Grab the role IDs
 					const role = guild.roles.cache.get(roleId);
 					// Make sure they can message
@@ -285,7 +308,6 @@ module.exports = [
 					}
 				}
 
-				const lockInfo = lockdownChannels.get(channel.id);
 				if (lockInfo) {
 					try {
 						const stickyMessage = await channel.messages.fetch(lockInfo.messageId);
