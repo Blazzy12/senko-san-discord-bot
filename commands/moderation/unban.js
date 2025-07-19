@@ -119,7 +119,7 @@ module.exports = {
 
 			const banEmbed = new EmbedBuilder()
 				.setTitle('✨ User Unbanned')
-				.setColor(0xFF0000)
+				.setColor(0x0000FF)
 				.addFields(
 					{ name: 'Unbanned User', value: `${target.username} (${target.displayName})`, inline: true },
 					{ name: 'Unbanned by', value: `${user.username} (${user.displayName})`, inline: true },
@@ -150,10 +150,10 @@ module.exports = {
 
 			// Then send the appropriate response
 			if (silent) {
-				const content = `**SILENT: UnBanned** ${target.username} for **Reason:** ${reason}`;
+				const content = `**SILENT: Unbanned** ${target.username} for **Reason:** ${reason}`;
 				return await interactionOrMessage.reply({ content, ephemeral: true });
 			} else {
-				const content = `**UnBanned** ${target.username} for **Reason:** ${reason}`;
+				const content = `**Unbanned** ${target.username} for **Reason:** ${reason}`;
 				return isSlashCommand
 					? await interactionOrMessage.reply({ content, ephemeral: false })
 					: await interactionOrMessage.reply(content);
