@@ -261,7 +261,7 @@ module.exports = [
 
 					await target.send({ embeds: [dmEmbed] });
 				} catch (error) {
-					console.error(`Could not DM user ${target.username}`, error);
+					console.error(`Could not DM user ${target.username}`);
 				}
 
 				if (silent) {
