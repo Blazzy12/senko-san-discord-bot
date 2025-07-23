@@ -12,6 +12,8 @@ const VALID_CONFIG_KEYS = [
 	'lockdown_log_channel_id',
 	'purge_log_channel_id',
 	'lockdown_allowed_roles',
+	'role_permissions',
+	'roles_command_log_channel_id',
 ];
 
 // Database schema definition - add new columns here
@@ -25,6 +27,8 @@ const SCHEMA_DEFINITION = {
 	lockdown_log_channel_id: { type: 'TEXT', defaultValue: null },
 	purge_log_channel_id: { type: 'TEXT', defaultValue: null },
 	lockdown_allowed_roles: { type: 'TEXT', defaultValue: null },
+	role_permissions: { type: 'TEXT', defaultValue: null },
+	roles_command_log_channel_id: { type: 'TEXT', defaultValue: null },
 	// Add new columns here in the future:
 	// new_column_name: { type: 'TEXT', defaultValue: null },
 };
@@ -53,6 +57,11 @@ const KEY_ALIASES = {
 	'purge_log_channel_id': 'purge_log_channel_id',
 	'lockdown_roles': 'lockdown_allowed_roles',
 	'lockdown_allowed_roles': 'lockdown_allowed_roles',
+	'role_perms': 'role_permissions',
+	'role_permissions': 'role_permissions',
+	'roles': 'roles_command_log_channel_id',
+	'roles_log': 'roles_command_log_channel_id',
+	'roles_command_log_channel_id': 'roles_command_log_channel_id',
 };
 
 // Init
@@ -236,6 +245,8 @@ module.exports = [
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
 								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
+								{ name: 'Role Permissions', value: 'role_permissions' },
+								{ name: 'Roles Command Log Channel', value: 'roles_command_log_channel_id' },
 							),
 					)
 					.addStringOption(option =>
@@ -260,6 +271,8 @@ module.exports = [
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
 								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
+								{ name: 'Role Permissions', value: 'role_permissions' },
+								{ name: 'Roles Command Log Channel', value: 'roles_command_log_channel_id' },
 							),
 					),
 			)
@@ -399,6 +412,8 @@ async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 			{ name: '🔇 Mute Log Channel', value: config.mute_log_channel_id ? `<#${config.mute_log_channel_id}>` : '`Not set (mute_log_channel_id)`', inline: true },
 			{ name: '🔒 Lockdown Log Channel', value: config.lockdown_log_channel_id ? `<#${config.lockdown_log_channel_id}>` : '`Not set (lockdown_log_channel_id)`', inline: true },
 			{ name: '🗡️ Purge Log Channel', value: config.purge_log_channel_id ? `<#${config.purge_log_channel_id}>` : '`Not set (purge_log_channel_id)`', inline: true },
+			{ name: '👤 Role Permissions', value: config.role_permissions ? '`Configured (use /role view for details)`' : '`Not set (role_permissions)`', inline: true },
+			{ name: '👤 Roles Command Log Channel', value: config.roles_command_log_channel_id ? `<#${config.roles_command_log_channel_id}>` : '`Not set (roles_command_log_channel_id)`', inline: true },
 			{ name: '🔐 Lockdown Allowed Roles', value: lockdownDisplay, inline: false },
 		)
 		.setTimestamp()
@@ -434,6 +449,7 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 	case 'ban_log_channel_id':
 	case 'mute_log_channel_id':
 	case 'lockdown_log_channel_id':
+	case 'roles_command_log_channel_id':
 	case 'purge_log_channel_id':
 		// Extract
 		const channelMatch = value.match(/^<#(\d+)>$/) || value.match(/^(\d+)$/);
@@ -490,6 +506,19 @@ async function handleSetConfig(interactionOrMessage, guild, key, value, isSlashC
 		}
 
 		processedValue = JSON.stringify(allRoleIds);
+		break;
+	case 'role_permissions':
+		// This will store JSON data like: {"moderator_role_id": ["role1_id", "role2_id"]}
+		try {
+			// Try to parse as JSON to validate format
+			JSON.parse(value);
+			processedValue = value;
+		} catch (error) {
+			const content = 'Role permissions must be valid JSON format. Example: {"role_id_that_can_give": ["role_id_to_give1", "role_id_to_give2"]}';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
 		break;
 	default:
 		const content = 'Invalid configuration key.';
