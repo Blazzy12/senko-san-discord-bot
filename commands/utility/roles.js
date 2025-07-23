@@ -360,7 +360,7 @@ async function handleRoleView(interactionOrMessage, guild, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
 
 	if (!config.role_permissions) {
-		const content = 'No role permissions have been configured yet. Use `/role setup` or the config command to set them up.';
+		const content = 'No role permissions have been configured yet. Use `/role setup` or your respective text command to set them up.';
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content, ephemeral: true })
 			: await interactionOrMessage.reply(content);
