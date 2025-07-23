@@ -244,7 +244,7 @@ async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, 
 			)
 			.setTimestamp();
 
-		const LogChannelId = config.roles_log_channel_id;
+		const LogChannelId = config.roles_command_log_channel_id;
 
 		// Send to configured logs
 		if (LogChannelId) {
@@ -325,7 +325,7 @@ async function handleRoleRemove(interactionOrMessage, guild, executor, targetUse
 			)
 			.setTimestamp();
 
-		const LogChannelId = config.roles_log_channel_id;
+		const LogChannelId = config.roles_command_log_channel_id;
 
 		// Send to configured logs
 		if (LogChannelId) {
