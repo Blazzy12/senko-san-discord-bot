@@ -53,6 +53,7 @@ module.exports = {
 					`\`${prefix}avatar [user|user_Id]\` - Fetches the user's avatar`,
 					`\`${prefix}serverinfo\` - Get server information`,
 					`\`${prefix}ping\` - Get the bots ping`,
+					`\`${prefix}role <add|remove|view|setup> [arguments]`,
 					'** All compatible with slash commands**',
 				],
 			},
@@ -107,7 +108,7 @@ module.exports = {
 			.addFields({
 				name: 'Commands',
 				value: category.commands.join('\n'),
-				inline: false
+				inline: false,
 			})
 			.setFooter({ text: 'Made with love <3 by _blazzy' })
 			.setTimestamp();
