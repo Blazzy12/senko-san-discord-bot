@@ -10,7 +10,7 @@ module.exports = {
 		// Check if slash or text
 		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
-		const content = 'https://i.imgur.com/rbGt34j.png';
+		const content = 'https://i.imgur.com/jTEgtjO.png';
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content })
 			: await interactionOrMessage.reply(content);
