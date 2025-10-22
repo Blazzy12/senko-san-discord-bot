@@ -62,7 +62,6 @@ const KEY_ALIASES = {
 	'roles': 'roles_command_log_channel_id',
 	'roles_log': 'roles_command_log_channel_id',
 	'roles_command_log_channel_id': 'roles_command_log_channel_id',
-	'role_groups': 'role_groups',
 };
 
 // Init
