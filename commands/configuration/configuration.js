@@ -417,8 +417,6 @@ async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 			{ name: '🔇 Mute Log Channel', value: config.mute_log_channel_id ? `<#${config.mute_log_channel_id}>` : '`Not set (mute_log_channel_id)`', inline: true },
 			{ name: '🔒 Lockdown Log Channel', value: config.lockdown_log_channel_id ? `<#${config.lockdown_log_channel_id}>` : '`Not set (lockdown_log_channel_id)`', inline: true },
 			{ name: '🗡️ Purge Log Channel', value: config.purge_log_channel_id ? `<#${config.purge_log_channel_id}>` : '`Not set (purge_log_channel_id)`', inline: true },
-			{ name: '👤 Role Permissions', value: config.role_permissions ? '`Configured (use /role view for details)`' : '`Not set (role_permissions)`', inline: true },
-			{ name: '👤 Role Groups', value: config.role_permissions ? '`Configured (use /role group list for details)`' : '`Not set (role_permissions)`', inline: true },
 			{ name: '👤 Roles Command Log Channel', value: config.roles_command_log_channel_id ? `<#${config.roles_command_log_channel_id}>` : '`Not set (roles_command_log_channel_id)`', inline: true },
 			{ name: '🔐 Lockdown Allowed Roles', value: lockdownDisplay, inline: false },
 		)
