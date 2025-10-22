@@ -14,6 +14,7 @@ const VALID_CONFIG_KEYS = [
 	'lockdown_allowed_roles',
 	'role_permissions',
 	'roles_command_log_channel_id',
+	'role_groups',
 ];
 
 // Database schema definition - add new columns here
@@ -29,6 +30,7 @@ const SCHEMA_DEFINITION = {
 	lockdown_allowed_roles: { type: 'TEXT', defaultValue: null },
 	role_permissions: { type: 'TEXT', defaultValue: null },
 	roles_command_log_channel_id: { type: 'TEXT', defaultValue: null },
+	role_groups: { type: 'TEXT', defaultValue: null },
 	// Add new columns here in the future:
 	// new_column_name: { type: 'TEXT', defaultValue: null },
 };
@@ -62,6 +64,7 @@ const KEY_ALIASES = {
 	'roles': 'roles_command_log_channel_id',
 	'roles_log': 'roles_command_log_channel_id',
 	'roles_command_log_channel_id': 'roles_command_log_channel_id',
+	'role_groups': 'role_groups',
 };
 
 // Init
@@ -247,6 +250,7 @@ module.exports = [
 								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
 								{ name: 'Role Permissions', value: 'role_permissions' },
 								{ name: 'Roles Command Log Channel', value: 'roles_command_log_channel_id' },
+								{ name: 'Roles Groups', value: 'role_groups' },
 							),
 					)
 					.addStringOption(option =>
@@ -273,6 +277,7 @@ module.exports = [
 								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
 								{ name: 'Role Permissions', value: 'role_permissions' },
 								{ name: 'Roles Command Log Channel', value: 'roles_command_log_channel_id' },
+								{ name: 'Roles Groups', value: 'role_groups' },
 							),
 					),
 			)
@@ -413,6 +418,7 @@ async function handleViewConfig(interactionOrMessage, guild, isSlashCommand) {
 			{ name: '🔒 Lockdown Log Channel', value: config.lockdown_log_channel_id ? `<#${config.lockdown_log_channel_id}>` : '`Not set (lockdown_log_channel_id)`', inline: true },
 			{ name: '🗡️ Purge Log Channel', value: config.purge_log_channel_id ? `<#${config.purge_log_channel_id}>` : '`Not set (purge_log_channel_id)`', inline: true },
 			{ name: '👤 Role Permissions', value: config.role_permissions ? '`Configured (use /role view for details)`' : '`Not set (role_permissions)`', inline: true },
+			{ name: '👤 Role Groups', value: config.role_permissions ? '`Configured (use /role group list for details)`' : '`Not set (role_permissions)`', inline: true },
 			{ name: '👤 Roles Command Log Channel', value: config.roles_command_log_channel_id ? `<#${config.roles_command_log_channel_id}>` : '`Not set (roles_command_log_channel_id)`', inline: true },
 			{ name: '🔐 Lockdown Allowed Roles', value: lockdownDisplay, inline: false },
 		)
