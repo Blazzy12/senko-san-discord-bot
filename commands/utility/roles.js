@@ -386,9 +386,29 @@ async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, 
 			}
 		}
 
-		return isSlashCommand
+		const replyMessage = isSlashCommand
 			? await interactionOrMessage.reply({ embeds: [embed] })
 			: await interactionOrMessage.reply({ embeds: [embed] });
+
+		// Auto-delete after 5 seconds for text commands
+		if (!isSlashCommand) {
+			setTimeout(async () => {
+				try {
+					// Delete the bot's reply
+					if (replyMessage && replyMessage.deletable) {
+						await replyMessage.delete();
+					}
+					// Delete the user's command message
+					if (interactionOrMessage.deletable) {
+						await interactionOrMessage.delete();
+					}
+				} catch (deleteError) {
+					console.error('Error deleting messages:', deleteError);
+				}
+			}, 5000);
+		}
+
+		return replyMessage;
 
 	} catch (error) {
 		console.error('Error adding role(s):', error);
@@ -550,9 +570,29 @@ async function handleRoleRemove(interactionOrMessage, guild, executor, targetUse
 			}
 		}
 
-		return isSlashCommand
+		const replyMessage = isSlashCommand
 			? await interactionOrMessage.reply({ embeds: [embed] })
 			: await interactionOrMessage.reply({ embeds: [embed] });
+
+		// Auto-delete after 5 seconds for text commands
+		if (!isSlashCommand) {
+			setTimeout(async () => {
+				try {
+					// Delete the bot's reply
+					if (replyMessage && replyMessage.deletable) {
+						await replyMessage.delete();
+					}
+					// Delete the user's command message
+					if (interactionOrMessage.deletable) {
+						await interactionOrMessage.delete();
+					}
+				} catch (deleteError) {
+					console.error('Error deleting messages:', deleteError);
+				}
+			}, 5000);
+		}
+
+		return replyMessage;
 
 	} catch (error) {
 		console.error('Error removing role(s):', error);
