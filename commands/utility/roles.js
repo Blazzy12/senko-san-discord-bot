@@ -852,7 +852,19 @@ async function handleRoleGroup(interactionOrMessage, guild, executor, action, gr
 			: await interactionOrMessage.reply({ embeds: [removeRoleEmbed] });
 
 	case 'list':
-		if (Object.keys(roleGroups).length === 0) {
+		// Re-fetch config to get latest data
+		const latestConfig = getGuildConfig(guild.id);
+		let latestRoleGroups = {};
+
+		if (latestConfig.role_groups) {
+			try {
+				latestRoleGroups = JSON.parse(latestConfig.role_groups);
+			} catch (error) {
+				console.error('Error parsing role groups for list:', error);
+			}
+		}
+
+		if (Object.keys(latestRoleGroups).length === 0) {
 			const content = 'No role groups configured. Use `/role group create` to create one.';
 			return isSlashCommand
 				? await interactionOrMessage.reply({ content, ephemeral: true })
@@ -865,7 +877,7 @@ async function handleRoleGroup(interactionOrMessage, guild, executor, action, gr
 			.setTimestamp();
 
 		let description = '';
-		for (const [key, groupData] of Object.entries(roleGroups)) {
+		for (const [key, groupData] of Object.entries(latestRoleGroups)) {
 			const roleNames = groupData.roles.map(roleId => {
 				const r = guild.roles.cache.get(roleId);
 				return r ? r.name : `Unknown Role (${roleId})`;
