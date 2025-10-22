@@ -10,26 +10,26 @@ module.exports = {
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('add')
-				.setDescription('Give a role to a user')
+				.setDescription('Give a role or role group to a user')
 				.addUserOption(option =>
 					option.setName('user')
 						.setDescription('User to give role to')
 						.setRequired(true))
-				.addRoleOption(option =>
-					option.setName('role')
-						.setDescription('Role to give')
+				.addStringOption(option =>
+					option.setName('role_or_group')
+						.setDescription('Role or role group name to give')
 						.setRequired(true)))
 		.addSubcommand(subcommand =>
 			subcommand
 				.setName('remove')
-				.setDescription('Remove a role from a user')
+				.setDescription('Remove a role or role group from a user')
 				.addUserOption(option =>
 					option.setName('user')
 						.setDescription('User to remove role from')
 						.setRequired(true))
-				.addRoleOption(option =>
-					option.setName('role')
-						.setDescription('Role to remove')
+				.addStringOption(option =>
+					option.setName('role_or_group')
+						.setDescription('Role or role group name to remove')
 						.setRequired(true)))
 		.addSubcommand(subcommand =>
 			subcommand
@@ -54,13 +54,36 @@ module.exports = {
 						.addChoices(
 							{ name: 'Add Permission', value: 'add' },
 							{ name: 'Remove Permission', value: 'remove' },
-						))),
+						)))
+		.addSubcommand(subcommand =>
+			subcommand
+				.setName('group')
+				.setDescription('Manage role groups')
+				.addStringOption(option =>
+					option.setName('action')
+						.setDescription('Action to perform')
+						.setRequired(true)
+						.addChoices(
+							{ name: 'Create', value: 'create' },
+							{ name: 'Delete', value: 'delete' },
+							{ name: 'Add Role', value: 'add_role' },
+							{ name: 'Remove Role', value: 'remove_role' },
+							{ name: 'List', value: 'list' },
+						))
+				.addStringOption(option =>
+					option.setName('group_name')
+						.setDescription('Name of the role group')
+						.setRequired(false))
+				.addRoleOption(option =>
+					option.setName('role')
+						.setDescription('Role to add/remove from group')
+						.setRequired(false))),
 	async execute(interactionOrMessage, args) {
 		// Check if slash command
 		const isSlashCommand = interactionOrMessage.isCommand?.() || interactionOrMessage.replied !== undefined;
 
 		// Declare
-		let guild, member, user, subcommand, targetUser, targetRole, giverRole, action, guildConfig;
+		let guild, member, user, subcommand, targetUser, targetRoleOrGroup, giverRole, action, guildConfig;
 
 		if (isSlashCommand) {
 			const interaction = interactionOrMessage;
@@ -70,7 +93,7 @@ module.exports = {
 
 			subcommand = interaction.options.getSubcommand();
 			targetUser = interaction.options.getUser('user');
-			targetRole = interaction.options.getRole('role');
+			targetRoleOrGroup = interaction.options.getString('role_or_group');
 			giverRole = interaction.options.getRole('giver_role');
 			action = interaction.options.getString('action');
 		} else {
@@ -84,7 +107,7 @@ module.exports = {
 			const prefix = guildConfig.prefix;
 
 			if (!args || args.length < 1) {
-				return await message.reply(`Usage: \`${prefix}role <add|remove|view|setup> [arguments]\``);
+				return await message.reply(`Usage: \`${prefix}role <add|remove|view|setup|group> [arguments]\``);
 			}
 
 			subcommand = args[0].toLowerCase();
@@ -94,7 +117,7 @@ module.exports = {
 			case 'add':
 			case 'remove':
 				if (args.length < 3) {
-					return await message.reply(`Usage: \`${prefix}role ${subcommand} <user> <role>\``);
+					return await message.reply(`Usage: \`${prefix}role ${subcommand} <user> <role or group>\``);
 				}
 				// Parse user (mention or ID)
 				const userMatch = args[1].match(/^<@!?(\d+)>$/) || args[1].match(/^(\d+)$/);
@@ -106,18 +129,8 @@ module.exports = {
 					return await message.reply('User not found in this server.');
 				}
 
-				// Parse role (mention or ID or name)
-				const roleArg = args.slice(2).join(' ');
-				const roleMatch = roleArg.match(/^<@&(\d+)>$/) || roleArg.match(/^(\d+)$/);
-				if (roleMatch) {
-					targetRole = guild.roles.cache.get(roleMatch[1]);
-				} else {
-					// Try to find by name
-					targetRole = guild.roles.cache.find(r => r.name.toLowerCase() === roleArg.toLowerCase());
-				}
-				if (!targetRole) {
-					return await message.reply('Role not found. Please use a role mention, ID, or exact name.');
-				}
+				// Get role or group name
+				targetRoleOrGroup = args.slice(2).join(' ');
 				break;
 			case 'setup':
 				if (args.length < 4) {
@@ -126,6 +139,7 @@ module.exports = {
 				// Parse giver role
 				const giverRoleArg = args[1];
 				const giverMatch = giverRoleArg.match(/^<@&(\d+)>$/) || giverRoleArg.match(/^(\d+)$/);
+				let targetRole;
 				if (giverMatch) {
 					giverRole = guild.roles.cache.get(giverMatch[1]);
 				} else {
@@ -151,26 +165,54 @@ module.exports = {
 				if (!['add', 'remove'].includes(action)) {
 					return await message.reply('Action must be either "add" or "remove".');
 				}
+
+				// Store targetRole for later use
+				targetRoleOrGroup = targetRole;
 				break;
+			case 'group':
+				if (args.length < 2) {
+					return await message.reply(`Usage: \`${prefix}role group <create|delete|add_role|remove_role|list> [group_name] [role]\``);
+				}
+				action = args[1].toLowerCase();
+				const groupName = args[2];
+
+				let role = null;
+				if (args.length > 3) {
+					const roleArg = args.slice(3).join(' ');
+					const roleMatch = roleArg.match(/^<@&(\d+)>$/) || roleArg.match(/^(\d+)$/);
+					if (roleMatch) {
+						role = guild.roles.cache.get(roleMatch[1]);
+					} else {
+						role = guild.roles.cache.find(r => r.name.toLowerCase() === roleArg.toLowerCase());
+					}
+				}
+
+				return await handleRoleGroup(interactionOrMessage, guild, member, action, groupName, role, isSlashCommand);
 			}
 		}
 
 		try {
 			switch (subcommand) {
 			case 'add':
-				await handleRoleAdd(interactionOrMessage, guild, member, targetUser, targetRole, isSlashCommand);
+				await handleRoleAdd(interactionOrMessage, guild, member, targetUser, targetRoleOrGroup, isSlashCommand);
 				break;
 			case 'remove':
-				await handleRoleRemove(interactionOrMessage, guild, member, targetUser, targetRole, isSlashCommand);
+				await handleRoleRemove(interactionOrMessage, guild, member, targetUser, targetRoleOrGroup, isSlashCommand);
 				break;
 			case 'view':
 				await handleRoleView(interactionOrMessage, guild, isSlashCommand);
 				break;
 			case 'setup':
-				await handleRoleSetup(interactionOrMessage, guild, member, giverRole, targetRole, action, isSlashCommand);
+				await handleRoleSetup(interactionOrMessage, guild, member, giverRole, targetRoleOrGroup, action, isSlashCommand);
+				break;
+			case 'group':
+				const groupAction = isSlashCommand ? interactionOrMessage.options.getString('action') : action;
+				const groupName = isSlashCommand ? interactionOrMessage.options.getString('group_name') : args[2];
+				const role = isSlashCommand ? interactionOrMessage.options.getRole('role') : null;
+				await handleRoleGroup(interactionOrMessage, guild, member, groupAction, groupName, role, isSlashCommand);
 				break;
 			default:
-				const content = 'Invalid subcommand. Use `add`, `remove`, `view`, or `setup`.';
+				const content = 'Invalid subcommand. Use `add`, `remove`, `view`, `setup`, or `group`.';
 				return isSlashCommand
 					? await interactionOrMessage.reply({ content, ephemeral: true })
 					: await interactionOrMessage.reply(content);
@@ -185,7 +227,7 @@ module.exports = {
 	},
 };
 
-async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, targetRole, isSlashCommand) {
+async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, roleOrGroupName, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
 
 	// Get target member
@@ -197,52 +239,127 @@ async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, 
 			: await interactionOrMessage.reply(content);
 	}
 
-	// Check if user already has the role
-	if (targetMember.roles.cache.has(targetRole.id)) {
-		const content = `${targetUser.username} already has the ${targetRole.name} role.`;
+	// Check if it's a role group first
+	const roleGroup = getRoleGroup(guild.id, roleOrGroupName);
+	let rolesToAdd = [];
+	let isGroup = false;
+
+	if (roleGroup) {
+		// It's a role group
+		isGroup = true;
+		for (const roleId of roleGroup.roles) {
+			const role = guild.roles.cache.get(roleId);
+			if (role) {
+				rolesToAdd.push(role);
+			}
+		}
+
+		if (rolesToAdd.length === 0) {
+			const content = `Role group "${roleOrGroupName}" exists but contains no valid roles.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+	} else {
+		// Try to find it as a single role
+		const roleMatch = roleOrGroupName.match(/^<@&(\d+)>$/) || roleOrGroupName.match(/^(\d+)$/);
+		let targetRole;
+
+		if (roleMatch) {
+			targetRole = guild.roles.cache.get(roleMatch[1]);
+		} else {
+			targetRole = guild.roles.cache.find(r => r.name.toLowerCase() === roleOrGroupName.toLowerCase());
+		}
+
+		if (!targetRole) {
+			const content = `Role or role group "${roleOrGroupName}" not found.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		rolesToAdd.push(targetRole);
+	}
+
+	// Check permissions and hierarchy for all roles
+	const errors = [];
+	const rolesAlreadyHas = [];
+	const validRoles = [];
+
+	for (const role of rolesToAdd) {
+		// Check if user already has the role
+		if (targetMember.roles.cache.has(role.id)) {
+			rolesAlreadyHas.push(role.name);
+			continue;
+		}
+
+		// Check permissions
+		const hasPermission = await checkRolePermission(guild, executor, role);
+		if (!hasPermission) {
+			errors.push(`No permission to give: ${role.name}`);
+			continue;
+		}
+
+		// Check role hierarchy
+		if (role.position >= executor.roles.highest.position && !executor.permissions.has(PermissionFlagsBits.Administrator)) {
+			errors.push(`Role too high: ${role.name}`);
+			continue;
+		}
+
+		// Check bot permissions
+		const botMember = guild.members.cache.get(guild.client.user.id);
+		if (role.position >= botMember.roles.highest.position) {
+			errors.push(`Bot cannot give: ${role.name}`);
+			continue;
+		}
+
+		validRoles.push(role);
+	}
+
+	// If no valid roles to add
+	if (validRoles.length === 0) {
+		let content = isGroup 
+			? `Cannot add any roles from group "${roleOrGroupName}".`
+			: `Cannot add the role "${roleOrGroupName}".`;
+
+		if (rolesAlreadyHas.length > 0) {
+			content += `\n\nAlready has: ${rolesAlreadyHas.join(', ')}`;
+		}
+		if (errors.length > 0) {
+			content += `\n\nErrors:\n${errors.join('\n')}`;
+		}
+
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content, ephemeral: true })
 			: await interactionOrMessage.reply(content);
 	}
 
-	// Check permissions
-	const hasPermission = await checkRolePermission(guild, executor, targetRole);
-	if (!hasPermission) {
-		const content = 'You don\'t have permission to give this role.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
-	}
-
-	// Check role hierarchy
-	if (targetRole.position >= executor.roles.highest.position && !executor.permissions.has(PermissionFlagsBits.Administrator)) {
-		const content = 'You cannot give a role that is equal to or higher than your highest role.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
-	}
-
-	// Check bot permissions
-	const botMember = guild.members.cache.get(guild.client.user.id);
-	if (targetRole.position >= botMember.roles.highest.position) {
-		const content = 'I cannot give a role that is equal to or higher than my highest role.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
-	}
-
+	// Add all valid roles
 	try {
-		await targetMember.roles.add(targetRole, `Role given by ${executor.user?.username || executor.displayName}`);
+		await targetMember.roles.add(validRoles, `Role${isGroup ? 's' : ''} given by ${executor.user?.username || executor.displayName}`);
 
 		const embed = new EmbedBuilder()
 			.setColor(0x00ff00)
-			.setTitle('✅ Role Added')
+			.setTitle(`✅ Role${isGroup ? 's' : ''} Added`)
 			.addFields(
 				{ name: 'User', value: `${targetUser.username} (${targetUser.id})`, inline: true },
-				{ name: 'Role', value: `${targetRole.name}`, inline: true },
+				{ name: isGroup ? 'Role Group' : 'Role', value: isGroup ? roleOrGroupName : validRoles[0].name, inline: true },
 				{ name: 'Given by', value: `${executor.user?.username || executor.displayName}`, inline: true },
-			)
-			.setTimestamp();
+			);
+
+		if (isGroup) {
+			embed.addFields({ name: 'Roles Added', value: validRoles.map(r => `• ${r.name}`).join('\n'), inline: false });
+		}
+
+		if (rolesAlreadyHas.length > 0) {
+			embed.addFields({ name: 'Already Had', value: rolesAlreadyHas.join(', '), inline: false });
+		}
+
+		if (errors.length > 0) {
+			embed.addFields({ name: 'Errors', value: errors.join('\n'), inline: false });
+		}
+
+		embed.setTimestamp();
 
 		const LogChannelId = config.roles_command_log_channel_id;
 
@@ -255,11 +372,7 @@ async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, 
 				} catch (logError) {
 					console.error('Error sending log to log channel:', logError);
 				}
-			} else {
-				console.warn('Configured log channel not found or is not a text channel.');
 			}
-		} else {
-			console.log('No log channel configured for this guild.');
 		}
 
 		return isSlashCommand
@@ -267,15 +380,15 @@ async function handleRoleAdd(interactionOrMessage, guild, executor, targetUser, 
 			: await interactionOrMessage.reply({ embeds: [embed] });
 
 	} catch (error) {
-		console.error('Error adding role:', error);
-		const content = 'Failed to add the role. Please check my permissions.';
+		console.error('Error adding role(s):', error);
+		const content = 'Failed to add the role(s). Please check my permissions.';
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content, ephemeral: true })
 			: await interactionOrMessage.reply(content);
 	}
 }
 
-async function handleRoleRemove(interactionOrMessage, guild, executor, targetUser, targetRole, isSlashCommand) {
+async function handleRoleRemove(interactionOrMessage, guild, executor, targetUser, roleOrGroupName, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
 
 	// Get target member
@@ -287,43 +400,120 @@ async function handleRoleRemove(interactionOrMessage, guild, executor, targetUse
 			: await interactionOrMessage.reply(content);
 	}
 
-	// Check if user has the role
-	if (!targetMember.roles.cache.has(targetRole.id)) {
-		const content = `${targetUser.username} doesn't have the ${targetRole.name} role.`;
+	// Check if it's a role group first
+	const roleGroup = getRoleGroup(guild.id, roleOrGroupName);
+	let rolesToRemove = [];
+	let isGroup = false;
+
+	if (roleGroup) {
+		// It's a role group
+		isGroup = true;
+		for (const roleId of roleGroup.roles) {
+			const role = guild.roles.cache.get(roleId);
+			if (role) {
+				rolesToRemove.push(role);
+			}
+		}
+
+		if (rolesToRemove.length === 0) {
+			const content = `Role group "${roleOrGroupName}" exists but contains no valid roles.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+	} else {
+		// Try to find it as a single role
+		const roleMatch = roleOrGroupName.match(/^<@&(\d+)>$/) || roleOrGroupName.match(/^(\d+)$/);
+		let targetRole;
+
+		if (roleMatch) {
+			targetRole = guild.roles.cache.get(roleMatch[1]);
+		} else {
+			targetRole = guild.roles.cache.find(r => r.name.toLowerCase() === roleOrGroupName.toLowerCase());
+		}
+
+		if (!targetRole) {
+			const content = `Role or role group "${roleOrGroupName}" not found.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		rolesToRemove.push(targetRole);
+	}
+
+	// Check permissions and hierarchy for all roles
+	const errors = [];
+	const rolesDoesntHave = [];
+	const validRoles = [];
+
+	for (const role of rolesToRemove) {
+		// Check if user has the role
+		if (!targetMember.roles.cache.has(role.id)) {
+			rolesDoesntHave.push(role.name);
+			continue;
+		}
+
+		// Check permissions
+		const hasPermission = await checkRolePermission(guild, executor, role);
+		if (!hasPermission) {
+			errors.push(`No permission to remove: ${role.name}`);
+			continue;
+		}
+
+		// Check role hierarchy
+		if (role.position >= executor.roles.highest.position && !executor.permissions.has(PermissionFlagsBits.Administrator)) {
+			errors.push(`Role too high: ${role.name}`);
+			continue;
+		}
+
+		validRoles.push(role);
+	}
+
+	// If no valid roles to remove
+	if (validRoles.length === 0) {
+		let content = isGroup 
+			? `Cannot remove any roles from group "${roleOrGroupName}".`
+			: `Cannot remove the role "${roleOrGroupName}".`;
+
+		if (rolesDoesntHave.length > 0) {
+			content += `\n\nDoesn't have: ${rolesDoesntHave.join(', ')}`;
+		}
+		if (errors.length > 0) {
+			content += `\n\nErrors:\n${errors.join('\n')}`;
+		}
+
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content, ephemeral: true })
 			: await interactionOrMessage.reply(content);
 	}
 
-	// Check permissions
-	const hasPermission = await checkRolePermission(guild, executor, targetRole);
-	if (!hasPermission) {
-		const content = 'You don\'t have permission to remove this role.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
-	}
-
-	// Check role hierarchy
-	if (targetRole.position >= executor.roles.highest.position && !executor.permissions.has(PermissionFlagsBits.Administrator)) {
-		const content = 'You cannot remove a role that is equal to or higher than your highest role.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
-	}
-
+	// Remove all valid roles
 	try {
-		await targetMember.roles.remove(targetRole, `Role removed by ${executor.user?.username || executor.displayName}`);
+		await targetMember.roles.remove(validRoles, `Role${isGroup ? 's' : ''} removed by ${executor.user?.username || executor.displayName}`);
 
 		const embed = new EmbedBuilder()
 			.setColor(0xff9900)
-			.setTitle('✅ Role Removed')
+			.setTitle(`✅ Role${isGroup ? 's' : ''} Removed`)
 			.addFields(
 				{ name: 'User', value: `${targetUser.username} (${targetUser.id})`, inline: true },
-				{ name: 'Role', value: `${targetRole.name}`, inline: true },
+				{ name: isGroup ? 'Role Group' : 'Role', value: isGroup ? roleOrGroupName : validRoles[0].name, inline: true },
 				{ name: 'Removed by', value: `${executor.user?.username || executor.displayName}`, inline: true },
-			)
-			.setTimestamp();
+			);
+
+		if (isGroup) {
+			embed.addFields({ name: 'Roles Removed', value: validRoles.map(r => `• ${r.name}`).join('\n'), inline: false });
+		}
+
+		if (rolesDoesntHave.length > 0) {
+			embed.addFields({ name: "Didn't Have", value: rolesDoesntHave.join(', '), inline: false });
+		}
+
+		if (errors.length > 0) {
+			embed.addFields({ name: 'Errors', value: errors.join('\n'), inline: false });
+		}
+
+		embed.setTimestamp();
 
 		const LogChannelId = config.roles_command_log_channel_id;
 
@@ -336,11 +526,7 @@ async function handleRoleRemove(interactionOrMessage, guild, executor, targetUse
 				} catch (logError) {
 					console.error('Error sending log to log channel:', logError);
 				}
-			} else {
-				console.warn('Configured log channel not found or is not a text channel.');
 			}
-		} else {
-			console.log('No log channel configured for this guild.');
 		}
 
 		return isSlashCommand
@@ -348,8 +534,8 @@ async function handleRoleRemove(interactionOrMessage, guild, executor, targetUse
 			: await interactionOrMessage.reply({ embeds: [embed] });
 
 	} catch (error) {
-		console.error('Error removing role:', error);
-		const content = 'Failed to remove the role. Please check my permissions.';
+		console.error('Error removing role(s):', error);
+		const content = 'Failed to remove the role(s). Please check my permissions.';
 		return isSlashCommand
 			? await interactionOrMessage.reply({ content, ephemeral: true })
 			: await interactionOrMessage.reply(content);
@@ -359,52 +545,71 @@ async function handleRoleRemove(interactionOrMessage, guild, executor, targetUse
 async function handleRoleView(interactionOrMessage, guild, isSlashCommand) {
 	const config = getGuildConfig(guild.id);
 
-	if (!config.role_permissions) {
-		const content = 'No role permissions have been configured yet. Use `/role setup` or your respective text command to set them up.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
+	const embed = new EmbedBuilder()
+		.setColor(0x0099ff)
+		.setTitle(`👤 Role Configuration - ${guild.name}`)
+		.setTimestamp();
+
+	let description = '';
+
+	// Show role permissions
+	if (config.role_permissions) {
+		try {
+			const rolePerms = JSON.parse(config.role_permissions);
+			description += '**Role Permissions:**\n';
+			for (const [giverRoleId, allowedRoleIds] of Object.entries(rolePerms)) {
+				const giverRole = guild.roles.cache.get(giverRoleId);
+				const giverRoleName = giverRole ? giverRole.name : `Unknown Role (${giverRoleId})`;
+
+				const allowedRoleNames = allowedRoleIds.map(roleId => {
+					const role = guild.roles.cache.get(roleId);
+					return role ? role.name : `Unknown Role (${roleId})`;
+				});
+
+				description += `**${giverRoleName}** can give:\n`;
+				description += allowedRoleNames.map(name => `• ${name}`).join('\n');
+				description += '\n\n';
+			}
+		} catch (error) {
+			console.error('Error parsing role permissions:', error);
+			description += '**Role Permissions:** Error reading configuration\n\n';
+		}
+	} else {
+		description += '**Role Permissions:** None configured\n\n';
 	}
 
-	try {
-		const rolePerms = JSON.parse(config.role_permissions);
-		const embed = new EmbedBuilder()
-			.setColor(0x0099ff)
-			.setTitle(`👤 Role Permissions - ${guild.name}`)
-			.setTimestamp();
+	// Show role groups
+	if (config.role_groups) {
+		try {
+			const roleGroups = JSON.parse(config.role_groups);
+			description += '**Role Groups:**\n';
+			for (const [groupName, groupData] of Object.entries(roleGroups)) {
+				const roleNames = groupData.roles.map(roleId => {
+					const role = guild.roles.cache.get(roleId);
+					return role ? role.name : `Unknown Role (${roleId})`;
+				});
 
-		let description = '';
-		for (const [giverRoleId, allowedRoleIds] of Object.entries(rolePerms)) {
-			const giverRole = guild.roles.cache.get(giverRoleId);
-			const giverRoleName = giverRole ? giverRole.name : `Unknown Role (${giverRoleId})`;
-
-			const allowedRoleNames = allowedRoleIds.map(roleId => {
-				const role = guild.roles.cache.get(roleId);
-				return role ? role.name : `Unknown Role (${roleId})`;
-			});
-
-			description += `**${giverRoleName}** can give:\n`;
-			description += allowedRoleNames.map(name => `• ${name}`).join('\n');
-			description += '\n\n';
+				description += `**${groupName}** contains:\n`;
+				description += roleNames.map(name => `• ${name}`).join('\n');
+				description += '\n\n';
+			}
+		} catch (error) {
+			console.error('Error parsing role groups:', error);
+			description += '**Role Groups:** Error reading configuration\n\n';
 		}
-
-		if (description.length > 4096) {
-			description = description.substring(0, 4090) + '...';
-		}
-
-		embed.setDescription(description || 'No permissions configured.');
-
-		return isSlashCommand
-			? await interactionOrMessage.reply({ embeds: [embed] })
-			: await interactionOrMessage.reply({ embeds: [embed] });
-
-	} catch (error) {
-		console.error('Error parsing role permissions:', error);
-		const content = 'Error reading role permissions configuration.';
-		return isSlashCommand
-			? await interactionOrMessage.reply({ content, ephemeral: true })
-			: await interactionOrMessage.reply(content);
+	} else {
+		description += '**Role Groups:** None configured\n';
 	}
+
+	if (description.length > 4096) {
+		description = description.substring(0, 4090) + '...';
+	}
+
+	embed.setDescription(description || 'No configuration found.');
+
+	return isSlashCommand
+		? await interactionOrMessage.reply({ embeds: [embed] })
+		: await interactionOrMessage.reply({ embeds: [embed] });
 }
 
 async function handleRoleSetup(interactionOrMessage, guild, executor, giverRole, targetRole, action, isSlashCommand) {
@@ -484,6 +689,228 @@ async function handleRoleSetup(interactionOrMessage, guild, executor, giverRole,
 	return isSlashCommand
 		? await interactionOrMessage.reply({ embeds: [embed] })
 		: await interactionOrMessage.reply({ embeds: [embed] });
+}
+
+async function handleRoleGroup(interactionOrMessage, guild, executor, action, groupName, role, isSlashCommand) {
+	// Check admin permissions for all actions except list
+	if (action !== 'list' && !executor.permissions.has(PermissionFlagsBits.ManageGuild)) {
+		const content = 'You need "Manage Server" permissions to manage role groups.';
+		return isSlashCommand
+			? await interactionOrMessage.reply({ content, ephemeral: true })
+			: await interactionOrMessage.reply(content);
+	}
+
+	const config = getGuildConfig(guild.id);
+	let roleGroups = {};
+
+	// Parse existing groups
+	if (config.role_groups) {
+		try {
+			roleGroups = JSON.parse(config.role_groups);
+		} catch (error) {
+			console.error('Error parsing existing role groups:', error);
+		}
+	}
+
+	switch (action) {
+	case 'create':
+		if (!groupName) {
+			const content = 'Please provide a group name.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		if (roleGroups[groupName.toLowerCase()]) {
+			const content = `Role group "${groupName}" already exists.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		roleGroups[groupName.toLowerCase()] = { name: groupName, roles: [] };
+		setConfigValue(guild.id, 'role_groups', JSON.stringify(roleGroups));
+
+		const createEmbed = new EmbedBuilder()
+			.setColor(0x00ff00)
+			.setTitle('✅ Role Group Created')
+			.addFields({ name: 'Group Name', value: groupName, inline: true })
+			.setTimestamp()
+			.setFooter({ text: `Created by ${executor.user?.username || executor.displayName}` });
+
+		return isSlashCommand
+			? await interactionOrMessage.reply({ embeds: [createEmbed] })
+			: await interactionOrMessage.reply({ embeds: [createEmbed] });
+
+	case 'delete':
+		if (!groupName) {
+			const content = 'Please provide a group name.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		if (!roleGroups[groupName.toLowerCase()]) {
+			const content = `Role group "${groupName}" does not exist.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		delete roleGroups[groupName.toLowerCase()];
+		const newGroupsJson = Object.keys(roleGroups).length > 0 ? JSON.stringify(roleGroups) : null;
+		setConfigValue(guild.id, 'role_groups', newGroupsJson);
+
+		const deleteEmbed = new EmbedBuilder()
+			.setColor(0xff0000)
+			.setTitle('✅ Role Group Deleted')
+			.addFields({ name: 'Group Name', value: groupName, inline: true })
+			.setTimestamp()
+			.setFooter({ text: `Deleted by ${executor.user?.username || executor.displayName}` });
+
+		return isSlashCommand
+			? await interactionOrMessage.reply({ embeds: [deleteEmbed] })
+			: await interactionOrMessage.reply({ embeds: [deleteEmbed] });
+
+	case 'add_role':
+		if (!groupName || !role) {
+			const content = 'Please provide both a group name and a role.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		if (!roleGroups[groupName.toLowerCase()]) {
+			const content = `Role group "${groupName}" does not exist. Create it first with \`/role group create\`.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		if (roleGroups[groupName.toLowerCase()].roles.includes(role.id)) {
+			const content = `Role ${role.name} is already in group "${groupName}".`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		roleGroups[groupName.toLowerCase()].roles.push(role.id);
+		setConfigValue(guild.id, 'role_groups', JSON.stringify(roleGroups));
+
+		const addRoleEmbed = new EmbedBuilder()
+			.setColor(0x00ff00)
+			.setTitle('✅ Role Added to Group')
+			.addFields(
+				{ name: 'Group Name', value: groupName, inline: true },
+				{ name: 'Role', value: role.name, inline: true },
+			)
+			.setTimestamp()
+			.setFooter({ text: `Added by ${executor.user?.username || executor.displayName}` });
+
+		return isSlashCommand
+			? await interactionOrMessage.reply({ embeds: [addRoleEmbed] })
+			: await interactionOrMessage.reply({ embeds: [addRoleEmbed] });
+
+	case 'remove_role':
+		if (!groupName || !role) {
+			const content = 'Please provide both a group name and a role.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		if (!roleGroups[groupName.toLowerCase()]) {
+			const content = `Role group "${groupName}" does not exist.`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		const roleIndex = roleGroups[groupName.toLowerCase()].roles.indexOf(role.id);
+		if (roleIndex === -1) {
+			const content = `Role ${role.name} is not in group "${groupName}".`;
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		roleGroups[groupName.toLowerCase()].roles.splice(roleIndex, 1);
+		setConfigValue(guild.id, 'role_groups', JSON.stringify(roleGroups));
+
+		const removeRoleEmbed = new EmbedBuilder()
+			.setColor(0xff9900)
+			.setTitle('✅ Role Removed from Group')
+			.addFields(
+				{ name: 'Group Name', value: groupName, inline: true },
+				{ name: 'Role', value: role.name, inline: true },
+			)
+			.setTimestamp()
+			.setFooter({ text: `Removed by ${executor.user?.username || executor.displayName}` });
+
+		return isSlashCommand
+			? await interactionOrMessage.reply({ embeds: [removeRoleEmbed] })
+			: await interactionOrMessage.reply({ embeds: [removeRoleEmbed] });
+
+	case 'list':
+		if (Object.keys(roleGroups).length === 0) {
+			const content = 'No role groups configured. Use `/role group create` to create one.';
+			return isSlashCommand
+				? await interactionOrMessage.reply({ content, ephemeral: true })
+				: await interactionOrMessage.reply(content);
+		}
+
+		const listEmbed = new EmbedBuilder()
+			.setColor(0x0099ff)
+			.setTitle(`📋 Role Groups - ${guild.name}`)
+			.setTimestamp();
+
+		let description = '';
+		for (const [key, groupData] of Object.entries(roleGroups)) {
+			const roleNames = groupData.roles.map(roleId => {
+				const r = guild.roles.cache.get(roleId);
+				return r ? r.name : `Unknown Role (${roleId})`;
+			});
+
+			description += `**${groupData.name}**\n`;
+			if (roleNames.length > 0) {
+				description += roleNames.map(name => `• ${name}`).join('\n');
+			} else {
+				description += '• No roles in this group';
+			}
+			description += '\n\n';
+		}
+
+		if (description.length > 4096) {
+			description = description.substring(0, 4090) + '...';
+		}
+
+		listEmbed.setDescription(description);
+
+		return isSlashCommand
+			? await interactionOrMessage.reply({ embeds: [listEmbed] })
+			: await interactionOrMessage.reply({ embeds: [listEmbed] });
+
+	default:
+		const content = 'Invalid action. Use `create`, `delete`, `add_role`, `remove_role`, or `list`.';
+		return isSlashCommand
+			? await interactionOrMessage.reply({ content, ephemeral: true })
+			: await interactionOrMessage.reply(content);
+	}
+}
+
+function getRoleGroup(guildId, groupName) {
+	const config = getGuildConfig(guildId);
+	if (!config.role_groups) {
+		return null;
+	}
+
+	try {
+		const roleGroups = JSON.parse(config.role_groups);
+		return roleGroups[groupName.toLowerCase()] || null;
+	} catch (error) {
+		console.error('Error parsing role groups:', error);
+		return null;
+	}
 }
 
 async function checkRolePermission(guild, member, targetRole) {

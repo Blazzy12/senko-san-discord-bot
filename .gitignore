@@ -7,3 +7,4 @@ important.txt
 commands/moderation/warnings.db
 commands/moderation/jwarnings.db
 commands/configuration/guild_config.db
+commands/moderation/tempban.js
