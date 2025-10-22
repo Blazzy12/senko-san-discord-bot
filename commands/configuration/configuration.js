@@ -59,8 +59,6 @@ const KEY_ALIASES = {
 	'purge_log_channel_id': 'purge_log_channel_id',
 	'lockdown_roles': 'lockdown_allowed_roles',
 	'lockdown_allowed_roles': 'lockdown_allowed_roles',
-	'role_perms': 'role_permissions',
-	'role_permissions': 'role_permissions',
 	'roles': 'roles_command_log_channel_id',
 	'roles_log': 'roles_command_log_channel_id',
 	'roles_command_log_channel_id': 'roles_command_log_channel_id',
@@ -248,9 +246,7 @@ module.exports = [
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
 								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
-								{ name: 'Role Permissions', value: 'role_permissions' },
 								{ name: 'Roles Command Log Channel', value: 'roles_command_log_channel_id' },
-								{ name: 'Roles Groups', value: 'role_groups' },
 							),
 					)
 					.addStringOption(option =>
@@ -275,9 +271,7 @@ module.exports = [
 								{ name: 'Lockdown Log Channel', value: 'lockdown_log_channel_id' },
 								{ name: 'Purge Log Channel', value: 'purge_log_channel_id' },
 								{ name: 'Lockdown Allowed Roles', value: 'lockdown_allowed_roles' },
-								{ name: 'Role Permissions', value: 'role_permissions' },
 								{ name: 'Roles Command Log Channel', value: 'roles_command_log_channel_id' },
-								{ name: 'Roles Groups', value: 'role_groups' },
 							),
 					),
 			)
